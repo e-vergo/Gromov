@@ -526,15 +526,76 @@ References:
 - Mal'cev, A. I. "On certain classes of infinite soluble groups" (1951)
 - Segal, D. "Polycyclic Groups" Cambridge University Press (1983)
 -/
-theorem isVirtuallyNilpotent_iff_polycyclic [FG G] :
-    IsVirtuallyNilpotent G ↔ IsPolycyclic G := by
+
+-- Helper: A finitely generated nilpotent group is polycyclic.
+-- Strategy: The lower central series G = G₀ ⊇ G₁ ⊇ ... ⊇ Gₙ = 1 has abelian quotients.
+-- Each quotient Gᵢ/Gᵢ₊₁ is f.g. abelian (since f.g. nilpotent groups have f.g. subgroups).
+-- F.g. abelian groups are polycyclic by the structure theorem (ℤ^n × finite torsion).
+-- We concatenate the polycyclic series for each quotient to get one for H.
+--
+-- Key facts needed:
+-- 1. lowerCentralSeries gives abelian quotients (they're in the center of quotient groups)
+-- 2. Subgroups of f.g. nilpotent groups are f.g. (Mal'cev)
+-- 3. F.g. abelian groups are polycyclic (structure theorem)
+-- 4. Extensions of polycyclic by polycyclic are polycyclic
+private theorem isPolycyclic_of_isNilpotent_fg (H : Type*) [Group H] [FG H] [IsNilpotent H] :
+    IsPolycyclic H := by
+  sorry
+
+-- Helper: Polycyclic groups are virtually nilpotent.
+-- This is the deep direction, using the Fitting subgroup.
+-- The Fitting subgroup of a polycyclic group has finite index.
+private theorem isVirtuallyNilpotent_of_isPolycyclic (H : Type*) [Group H] (hP : IsPolycyclic H) :
+    IsVirtuallyNilpotent H := by
+  -- Polycyclic groups are solvable
+  -- The Fitting subgroup (max normal nilpotent subgroup) has finite index
+  -- This is a deep theorem in the structure theory of polycyclic groups
+  sorry
+
+-- Helper: Finite groups are polycyclic.
+-- Every finite group has a composition series with simple factors.
+-- This is proven by induction on cardinality: pick an element, form cyclic subgroup,
+-- take its normal closure, and induct on the quotient and the normal closure.
+private theorem isPolycyclic_of_finite (K : Type*) [Group K] [Finite K] : IsPolycyclic K := by
+  -- Finite groups are polycyclic: they have a subnormal series with cyclic factors.
+  -- This requires either:
+  -- 1. Showing every finite group is solvable (false in general - need to avoid simple groups)
+  -- 2. Showing every finite group has a composition series (Jordan-Hölder)
+  -- 3. Direct construction using cyclic subgroups
+  -- For finite *abelian* groups this is the structure theorem.
+  -- For general finite groups, this requires more infrastructure.
+  sorry
+
+-- Helper: If H is a finite-index subgroup of G and H is polycyclic, then G is polycyclic.
+-- Strategy: G/H is finite hence polycyclic. H is polycyclic. Combine the series.
+private theorem isPolycyclic_of_finiteIndex_polycyclic (H : Subgroup G) [H.FiniteIndex]
+    (hH : IsPolycyclic H) : IsPolycyclic G := by
+  -- The quotient G/H.normalCore is finite, hence polycyclic
+  haveI : (H.normalCore).FiniteIndex := Subgroup.finiteIndex_normalCore H
+  haveI : Finite (G ⧸ H.normalCore) := Subgroup.finite_quotient_of_finiteIndex
+  -- Use that extensions of polycyclic by polycyclic are polycyclic
+  -- This requires showing:
+  -- 1. The series for G/H.normalCore lifts to a series for G ending at H.normalCore
+  -- 2. H.normalCore is polycyclic (subgroup of polycyclic H)
+  -- 3. Concatenate the two series
+  -- This is technically involved but standard. Sorry for now.
+  sorry
+
+theorem isVirtuallyNilpotent_iff_polycyclic [FG G] : IsVirtuallyNilpotent G ↔ IsPolycyclic G := by
   constructor
-  · -- Forward direction: Virtually nilpotent f.g. group implies polycyclic
-    intro hVN
-    sorry
-  · -- Backward direction: Polycyclic group implies virtually nilpotent
-    intro hPoly
-    sorry
+  · -- (→) Virtually nilpotent → Polycyclic
+    intro ⟨H, hNil, hFin⟩
+    haveI : H.FiniteIndex := hFin
+    haveI : IsNilpotent H := hNil
+    -- H is f.g. (finite-index subgroup of f.g. group)
+    haveI : FG H := Subgroup.fg_of_index_ne_zero H
+    -- H is nilpotent and f.g., hence polycyclic
+    have hHP : IsPolycyclic H := isPolycyclic_of_isNilpotent_fg H
+    -- G is a finite extension of H, hence polycyclic
+    exact isPolycyclic_of_finiteIndex_polycyclic H hHP
+  · -- (←) Polycyclic → Virtually nilpotent
+    intro hP
+    exact isVirtuallyNilpotent_of_isPolycyclic G hP
 
 /-- A group is residually finite if the intersection of all finite-index normal subgroups
 is trivial. -/
@@ -573,11 +634,10 @@ private theorem isResiduallyFinite_of_fg_commGroup (A : Type*) [CommGroup A] [FG
         Finite.of_equiv ψ.range (QuotientGroup.quotientKerEquivRange ψ).symm
       exact Subgroup.finiteIndex_of_finite_quotient
     · -- g ∉ ker
-      simp only [MonoidHom.mem_ker, MonoidHom.coe_comp, MulEquiv.coe_toMonoidHom,
-        Function.comp_apply, MonoidHom.coe_snd]
+      simp only [MonoidHom.mem_ker]
       exact ht
   · -- Free part nontrivial: find an index where g'.1 ≠ 1
-    simp only [ne_eq, funext_iff, Pi.one_apply, not_forall] at hz
+    simp only [funext_iff, Pi.one_apply, not_forall] at hz
     obtain ⟨idx, hidx⟩ := hz
     have hidx' : (g'.1 idx).toAdd ≠ 0 := fun h => hidx (toAdd_eq_zero.mp h)
     -- Take m = |n| + 1 where n is the additive value at idx
@@ -588,7 +648,15 @@ private theorem isResiduallyFinite_of_fg_commGroup (A : Type*) [CommGroup A] [FG
       have habs : n.natAbs = m * k.natAbs := by rw [hk]; exact Int.natAbs_mul m k
       rcases k.natAbs.eq_zero_or_pos with hk0 | hkpos
       · exact hidx' (Int.natAbs_eq_zero.mp (by rw [habs, hk0, mul_zero]))
-      · omega
+      · -- n.natAbs = (n.natAbs + 1) * k.natAbs with k.natAbs ≥ 1 is impossible
+        have hn_pos : n.natAbs ≥ 1 := Int.natAbs_pos.mpr hidx'
+        have hge : m * k.natAbs ≥ m := Nat.le_mul_of_pos_right m hkpos
+        rw [habs] at hn_pos
+        have : n.natAbs + 1 ≤ n.natAbs := calc
+          n.natAbs + 1 = m := rfl
+          _ ≤ m * k.natAbs := hge
+          _ = n.natAbs := habs.symm
+        omega
     -- Build quotient map to finite target
     haveI : Finite ((k : j) → Multiplicative (ZMod m)) := Pi.finite
     haveI : Finite (((k : j) → Multiplicative (ZMod m)) × T) := Finite.instProd
@@ -648,7 +716,8 @@ References:
 -/
 -- Helper: Residual finiteness of f.g. nilpotent groups
 -- This is proven by induction on the nilpotency class
-private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H] [hNil : IsNilpotent H] :
+private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
+    [hNil : IsNilpotent H] :
     IsResiduallyFinite H := by
   -- Induction on nilpotency class
   obtain ⟨n, hn⟩ := hNil.nilpotent
@@ -676,32 +745,7 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H] 
     intro g hg
     -- If g ∉ center(H), use the induction hypothesis on H/Z(H)
     by_cases hgZ : g ∈ center H
-    · -- g is in the center.
-      -- This is the hard case. We need to find a finite-index normal subgroup not containing g.
-      -- The key insight: use the lower central series.
-      -- Since H is nilpotent, there exists i such that g ∈ lowerCentralSeries H i but
-      -- g ∉ lowerCentralSeries H (i+1). The quotient γ_i/γ_{i+1} is abelian.
-      -- For f.g. abelian groups, we can separate points from identity.
-      --
-      -- For now, we use a simpler approach based on the structure of nilpotent groups.
-      -- Since g ∈ center H, the subgroup ⟨g⟩ = zpowers g is central, hence normal.
-      -- The quotient H/⟨g⟩ is well-defined, but may not have finite index.
-      --
-      -- Alternative: Use the commutator subgroup. If g ∉ [H,H], then the abelianization
-      -- H^ab = H/[H,H] is f.g. abelian, and g survives in H^ab.
-      -- For f.g. abelian groups, residual finiteness gives us the result.
-      --
-      -- If g ∈ [H,H], we recurse on the lower central series.
-      --
-      -- For simplicity, we use the fact that nilpotent groups are residually finite.
-      -- This is proven using the Mal'cev correspondence for torsion-free groups,
-      -- and direct arguments for groups with torsion.
-      --
-      -- Since this requires substantial additional development, we complete this
-      -- proof by using the abelianization approach.
-      --
-      -- Step 1: Map to the abelianization H^ab = H/[H,H]
-      -- The commutator subgroup [H,H] is normal
+    · -- The commutator subgroup [H,H] is normal
       haveI : (commutator H).Normal := inferInstance
       -- Consider the image of g in H^ab
       let gbar := QuotientGroup.mk (s := commutator H) g
@@ -766,9 +810,10 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H] 
       haveI : IsNilpotent (H ⧸ center H) := inferInstance
       -- The upper central series of H/Z(H) at n equals ⊤
       have hn' : upperCentralSeries (H ⧸ center H) n = ⊤ := by
-        -- Use the relationship: upperCentralSeries H (n+1) = comap (mk') (upperCentralSeries (H/Z(H)) n)
+        -- upperCentralSeries H (n+1) = comap (mk') (upperCentralSeries (H/Z(H)) n)
         have hcomap := comap_upperCentralSeries_quotient_center (G := H) n
-        -- hcomap : comap (mk' (center H)) (upperCentralSeries (H ⧸ center H) n) = upperCentralSeries H (n+1)
+        -- comap (mk' (center H)) (upperCentralSeries (H ⧸ center H) n)
+        --   = upperCentralSeries H (n+1)
         rw [eq_top_iff]
         intro x _
         obtain ⟨y, rfl⟩ := QuotientGroup.mk_surjective x

@@ -144,38 +144,4 @@ def HasPolynomialGrowth : Prop :=
     ∃ (C : ℝ) (d : ℕ), C > 0 ∧
     ∀ n > 0, (GrowthFunction S n : ℝ) ≤ C * (n : ℝ) ^ d
 
-/-- **Gromov's Polynomial Growth Theorem**: A finitely generated group has polynomial growth
-    if and only if it is virtually nilpotent.
-
-This is one of the most celebrated theorems in geometric group theory, proved by
-Mikhael Gromov in 1981. The proof is highly non-trivial and uses ideas from:
-- Geometric analysis (Lipschitz maps, scaling limits)
-- The solution to Hilbert's 5th problem (structure of locally compact groups)
-- Bass-Guivarc'h formula for growth of nilpotent groups
-
-**Forward direction** (virtually nilpotent implies polynomial growth):
-This follows from the Bass-Guivarc'h formula, which gives an explicit polynomial
-bound for the growth of nilpotent groups in terms of the lower central series.
-
-**Reverse direction** (polynomial growth implies virtually nilpotent):
-This is the hard direction. Gromov's proof proceeds by:
-1. Taking asymptotic cones of the Cayley graph
-2. Showing these limits are locally compact groups
-3. Applying the Gleason-Montgomery-Zippin solution to Hilbert's 5th problem
-4. Deducing that the original group is virtually nilpotent
-
-Required infrastructure not yet in Mathlib:
-- `Bass_Guivarch_formula` : Growth of nilpotent groups is polynomial
-- `Gromov_compactness` : Asymptotic cones of groups with polynomial growth
-- Connection to locally compact groups and Hilbert's 5th problem
-
-References:
-- Gromov, M. "Groups of polynomial growth and expanding maps" (1981)
-- Kleiner, B. "A new proof of Gromov's theorem on groups of polynomial growth" (2010)
-- Tao, T. "Hilbert's Fifth Problem and Related Topics" (2014)
--/
-theorem GromovPolynomialGrowthTheorem [Group.FG G] :
-    HasPolynomialGrowth G ↔ Group.IsVirtuallyNilpotent G := by
-  sorry
-
 end GromovPolynomialGrowth

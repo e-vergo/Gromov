@@ -4,3 +4,7 @@ import Gromov.PolynomialGrowth
 import Gromov.VirtuallyNilpotent
 import Gromov.NilpotentGrowth
 import Gromov.AbelianGrowth
+import Gromov.Descent
+import Gromov.Harmonic
+import Gromov.Poincare
+import Gromov.MainTheorem

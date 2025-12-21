@@ -316,8 +316,7 @@ theorem poincare_inequality (S : Set G)
       swap
       · simp only [Finset.not_nonempty_iff_eq_empty] at hAne
         simp only [l2NormSq, hAne, Finset.sum_empty]
-      ·
-        -- If f is constant on A with value c, then meanValue = c
+      · -- If f is constant on A with value c, then meanValue = c
         -- Since meanValue = 0, we have c = 0, so f = 0 on A
         -- We need to show f is constant on A using connectivity
         -- For a Cayley ball, any element g can be written as a product of generators
@@ -351,7 +350,7 @@ theorem poincare_inequality (S : Set G)
           clear hg
           induction l generalizing g with
           | nil =>
-            simp at hl_prod
+            simp only [List.prod_nil] at hl_prod
             rw [hl_prod]
           | cons hd tl ih =>
             simp only [List.prod_cons] at hl_prod
@@ -393,11 +392,14 @@ theorem poincare_inequality (S : Set G)
                 simp only [one_mul] at heq
                 exact heq
               | inr hhd_inv_in_S =>
-                have hhd_inv_in_Sfin : hd⁻¹ ∈ Sfin := by rw [← _hSfin] at hhd_inv_in_S; exact hhd_inv_in_S
+                have hhd_inv_in_Sfin : hd⁻¹ ∈ Sfin := by
+                  rw [← _hSfin] at hhd_inv_in_S; exact hhd_inv_in_S
                 have hhd_in_ball : hd ∈ CayleyBall S r := by
                   refine ⟨[hd], ?_, ?_, by simp⟩
                   · simp only [List.length_singleton]; omega
-                  · intro x hx; simp at hx; subst hx; right; exact hhd_inv_in_S
+                  · intro x hx
+                    simp only [List.mem_singleton] at hx
+                    subst hx; right; exact hhd_inv_in_S
                 have hhd_in_A : hd ∈ A := by
                   have : hd ∈ (A : Set G) := by rw [_hA]; exact hhd_in_ball
                   exact this
@@ -434,20 +436,21 @@ theorem poincare_inequality (S : Set G)
                   _ = f p := by
                     cases hlhd_mem with
                     | inl hlhd_in_S =>
-                      have hlhd_in_Sfin : lhd ∈ Sfin := by rw [← _hSfin] at hlhd_in_S; exact hlhd_in_S
+                      have hlhd_in_Sfin : lhd ∈ Sfin := by
+                        rw [← _hSfin] at hlhd_in_S; exact hlhd_in_S
                       exact hconst_edge p hp lhd hlhd_in_Sfin
                     | inr hlhd_inv_in_S =>
                       have hlhd_inv_in_Sfin : lhd⁻¹ ∈ Sfin := by
                         rw [← _hSfin] at hlhd_inv_in_S; exact hlhd_inv_in_S
-                      -- hbackward gives: f h = f (h * s⁻¹) when h ∈ A, s ∈ Sfin, h * s⁻¹ ∈ A
+                      -- hbackward: f h = f (h * s⁻¹) when h ∈ A, s ∈ Sfin, h * s⁻¹ ∈ A
                       -- With h = p * lhd, s = lhd⁻¹, we get s⁻¹ = lhd
-                      -- So: f (p * lhd) = f (p * lhd * lhd) if p * lhd * lhd ∈ A... not what we want
+                      -- f(p*lhd) = f(p*lhd*lhd) if p*lhd*lhd ∈ A... not what we want
                       -- Instead, use forward edge: f(p * lhd⁻¹ * lhd) = f(p * lhd⁻¹)
                       -- i.e., f(p) = f(p * lhd⁻¹) when p ∈ A, lhd⁻¹ ∈ Sfin
                       -- Then we need f(p * lhd) = f(p)
                       -- From hconst_edge: f(g * s) = f(g) for g ∈ A, s ∈ Sfin
                       -- But lhd ∉ Sfin necessarily (only lhd⁻¹ ∈ Sfin)
-                      -- We need the reverse: show f(p) = f(p * lhd⁻¹) first, then relate to f(p * lhd)
+                      -- Need the reverse: show f(p) = f(p*lhd⁻¹), then relate to f(p*lhd)
                       -- Actually, use hbackward on p with s = lhd⁻¹:
                       -- f(p) = f(p * (lhd⁻¹)⁻¹) = f(p * lhd) if p * lhd ∈ A
                       have hback' := hbackward p hp lhd⁻¹ hlhd_inv_in_Sfin
@@ -457,7 +460,9 @@ theorem poincare_inequality (S : Set G)
             have hhd_in_ball : hd ∈ CayleyBall S r := by
               refine ⟨[hd], ?_, ?_, by simp⟩
               · simp only [List.length_singleton]; omega
-              · intro x hx; simp at hx; subst hx; exact hhd
+              · intro x hx
+                simp only [List.mem_singleton] at hx
+                subst hx; exact hhd
             have hhd_in_A : hd ∈ A := by
               have : hd ∈ (A : Set G) := by rw [_hA]; exact hhd_in_ball
               exact this
