@@ -6,51 +6,38 @@ Polynomial growth for groups: asymptotic definitions, independence of generating
 and basic properties.
 -/
 
-import Mathlib.Algebra.Group.Subgroup.Basic
-import Mathlib.GroupTheory.FreeGroup.Basic
-import Mathlib.GroupTheory.Nilpotent
-import Mathlib.GroupTheory.Finiteness
-import Mathlib.GroupTheory.Index
-import Mathlib.GroupTheory.QuotientGroup.Basic
-import Mathlib.GroupTheory.Schreier
-import Mathlib.Order.Filter.AtTopBot.Basic
-import Mathlib.Order.Filter.AtTopBot.Finset
-import Mathlib.Data.Set.Card
-import Mathlib.Data.Finset.Card
-import Mathlib.Data.Real.Archimedean
-import Mathlib.Tactic.Positivity
-import Mathlib.Data.Int.Interval
-import Mathlib.Order.Interval.Set.Pi
-import Mathlib.Order.Interval.Finset.Basic
-import Gromov.GromovPolynomialGrowth
+module
+
+public import Mathlib.Algebra.Group.Subgroup.Basic
+public import Mathlib.GroupTheory.FreeGroup.Basic
+public import Mathlib.GroupTheory.Nilpotent
+public import Mathlib.GroupTheory.Finiteness
+public import Mathlib.GroupTheory.Index
+public import Mathlib.GroupTheory.QuotientGroup.Basic
+public import Mathlib.GroupTheory.Schreier
+public import Mathlib.Order.Filter.AtTopBot.Basic
+public import Mathlib.Order.Filter.AtTopBot.Finset
+public import Mathlib.Data.Set.Card
+public import Mathlib.Data.Finset.Card
+public import Mathlib.Data.Real.Archimedean
+public import Mathlib.Tactic.Positivity
+public import Mathlib.Data.Int.Interval
+public import Mathlib.Order.Interval.Set.Pi
+public import Mathlib.Order.Interval.Finset.Basic
+public import Gromov.Proofs.GromovPolynomialGrowth
+public import Gromov.Definitions.GrowthDegree
 
 set_option linter.style.longLine false
 
-namespace PolynomialGrowth
+namespace Gromov.PolynomialGrowth
 
-open GromovPolynomialGrowth Filter Set
+public section
+
+open Gromov Filter Set
 
 variable {G : Type*} [Group G]
 
 /-! ## Asymptotic Definitions -/
-
-/-- A function `f : ℕ → ℕ` is polynomially bounded with degree `d` if there exists
-    a constant `C > 0` such that `f n ≤ C * n^d` for all `n > 0`. -/
-def IsPolynomiallyBounded (f : ℕ → ℕ) (d : ℕ) : Prop :=
-  ∃ C : ℝ, C > 0 ∧ ∀ n > 0, (f n : ℝ) ≤ C * (n : ℝ) ^ d
-
-/-- A function has some polynomial bound if it is polynomially bounded for some degree. -/
-def HasSomePolynomialBound (f : ℕ → ℕ) : Prop :=
-  ∃ d : ℕ, IsPolynomiallyBounded f d
-
-/-- The set of degrees `d` for which `f` is polynomially bounded. -/
-def PolynomialBoundDegrees (f : ℕ → ℕ) : Set ℕ :=
-  {d : ℕ | IsPolynomiallyBounded f d}
-
-/-- The growth degree of a function is the infimum of all valid polynomial bounds.
-    Returns 0 if the function has no polynomial bound (by convention). -/
-noncomputable def GrowthDegree (f : ℕ → ℕ) : ℕ :=
-  sInf (PolynomialBoundDegrees f)
 
 theorem isPolynomiallyBounded_of_le {f : ℕ → ℕ} {d₁ d₂ : ℕ} (hd : d₁ ≤ d₂)
     (h : IsPolynomiallyBounded f d₁) : IsPolynomiallyBounded f d₂ := by
@@ -791,4 +778,6 @@ theorem zn_hasPolynomialGrowth (m : ℕ) : HasPolynomialGrowth (Multiplicative (
           exact_mod_cast Nat.pow_le_pow_left h m
       _ = 3 ^ m * n ^ m := by ring
 
-end PolynomialGrowth
+end
+
+end Gromov.PolynomialGrowth

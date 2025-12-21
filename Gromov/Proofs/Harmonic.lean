@@ -5,12 +5,17 @@ SPDX-License-Identifier: Apache-2.0
 Harmonic functions on Cayley graphs and the space of Lipschitz harmonic functions.
 -/
 
-import Gromov.CayleyGraph
-import Mathlib.Analysis.Normed.Group.Basic
-import Mathlib.LinearAlgebra.Dimension.Finrank
-import Mathlib.Topology.Algebra.Module.Basic
+module
 
-namespace GromovPolynomialGrowth
+public import Gromov.Proofs.CayleyGraph
+public import Gromov.Definitions.Harmonic
+public import Mathlib.Analysis.Normed.Group.Basic
+public import Mathlib.LinearAlgebra.Dimension.Finrank
+public import Mathlib.Topology.Algebra.Module.Basic
+
+namespace Gromov
+
+public section
 
 open scoped NNReal
 
@@ -33,26 +38,16 @@ section Harmonic
 
 variable (S : Set G)
 
-/-- A function f : G → ℝ is harmonic with respect to generating set S if at every point,
-    the sum over all neighbors equals 2 * |S| times the value at that point.
-    This captures the discrete Laplacian condition Δf = 0. -/
-def IsHarmonic [Fintype S] (f : G → ℝ) : Prop :=
-  ∀ g : G, ∑ s : S, (f (g * s.val) + f (g * s.val⁻¹)) = 2 * (Fintype.card S) * f g
-
-/-- Alternative definition for symmetric generating sets: the sum over S equals |S| * f(g) -/
-def IsHarmonicSymmetric [Fintype S] (f : G → ℝ) : Prop :=
-  ∀ g : G, ∑ s : S, f (g * s.val) = (Fintype.card S) * f g
-
 /-- For symmetric generating sets, the two definitions of harmonic coincide -/
-theorem isHarmonic_iff_isHarmonicSymmetric [Fintype S] (hS : IsSymmetric S) (f : G → ℝ) :
+theorem isHarmonic_iff_isHarmonicSymmetric [Fintype S] (hS : Gromov.IsSymmetric S) (f : G → ℝ) :
     IsHarmonic S f ↔ IsHarmonicSymmetric S f := by
   constructor
   · intro hf g
     have h := hf g
     have hsum : ∑ s : S, f (g * s.val⁻¹) = ∑ s : S, f (g * s.val) := by
       let invEquiv : S ≃ S := {
-        toFun := fun s => ⟨s.val⁻¹, hS s s.prop⟩
-        invFun := fun s => ⟨s.val⁻¹, hS s s.prop⟩
+        toFun := fun s => ⟨s.val⁻¹, hS s.val s.prop⟩
+        invFun := fun s => ⟨s.val⁻¹, hS s.val s.prop⟩
         left_inv := fun s => by simp
         right_inv := fun s => by simp
       }
@@ -67,8 +62,8 @@ theorem isHarmonic_iff_isHarmonicSymmetric [Fintype S] (hS : IsSymmetric S) (f :
   · intro hf g
     have hsum : ∑ s : S, f (g * s.val⁻¹) = ∑ s : S, f (g * s.val) := by
       let invEquiv : S ≃ S := {
-        toFun := fun s => ⟨s.val⁻¹, hS s s.prop⟩
-        invFun := fun s => ⟨s.val⁻¹, hS s s.prop⟩
+        toFun := fun s => ⟨s.val⁻¹, hS s.val s.prop⟩
+        invFun := fun s => ⟨s.val⁻¹, hS s.val s.prop⟩
         left_inv := fun s => by simp
         right_inv := fun s => by simp
       }
@@ -150,15 +145,6 @@ section Lipschitz
 
 variable (S : Set G)
 
-/-- A function f : G → ℝ is L-Lipschitz with respect to the word metric if
-    |f(g) - f(h)| ≤ L * wordDist S g h for all g, h. -/
-def IsWordLipschitz (L : ℝ) (f : G → ℝ) : Prop :=
-  ∀ g h : G, |f g - f h| ≤ L * (wordDist S g h : ℝ)
-
-/-- Non-negative Lipschitz constant version -/
-def IsWordLipschitz' (L : ℝ≥0) (f : G → ℝ) : Prop :=
-  ∀ g h : G, |f g - f h| ≤ L * (wordDist S g h : ℝ)
-
 /-- Constant functions are 0-Lipschitz -/
 theorem isWordLipschitz_const (c : ℝ) : IsWordLipschitz S 0 (fun _ => c) := by
   intro g h
@@ -212,16 +198,6 @@ end Lipschitz
 section LipschitzHarmonicSpace
 
 variable (S : Set G) [Fintype S]
-
-/-- The space H_L(G,S) of L-Lipschitz harmonic functions.
-    This is a key object in the proof of Gromov's theorem: its finite-dimensionality
-    is used to construct a representation of G. -/
-def LipschitzHarmonicSpace (L : ℝ) : Set (G → ℝ) :=
-  {f | IsHarmonic S f ∧ IsWordLipschitz S L f}
-
-/-- The space of Lipschitz harmonic functions with non-negative constant -/
-def LipschitzHarmonicSpace' (L : ℝ≥0) : Set (G → ℝ) :=
-  {f | IsHarmonic S f ∧ IsWordLipschitz S L f}
 
 /-- The zero function is in any Lipschitz harmonic space (for L ≥ 0) -/
 theorem zero_mem_lipschitzHarmonicSpace {L : ℝ} (hL : 0 ≤ L) :
@@ -282,4 +258,6 @@ theorem mem_harmonicSubmodule (f : G → ℝ) :
 
 end Submodule
 
-end GromovPolynomialGrowth
+end
+
+end Gromov

@@ -5,8 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 Polynomial growth for finitely generated abelian groups.
 -/
 
-import Gromov.PolynomialGrowth
-import Mathlib.GroupTheory.FiniteAbelian.Basic
+module
+
+public import Gromov.Proofs.PolynomialGrowth
+public import Mathlib.GroupTheory.FiniteAbelian.Basic
 
 /-!
 # Polynomial Growth for Abelian Groups
@@ -31,9 +33,11 @@ The proof follows the structure theorem for finitely generated abelian groups:
 The growth degree equals the torsion-free rank r.
 -/
 
-namespace PolynomialGrowth
+namespace Gromov.PolynomialGrowth
 
-open GromovPolynomialGrowth Filter Set
+public section
+
+open Gromov Filter Set
 
 variable {G : Type*} [Group G]
 
@@ -262,4 +266,6 @@ theorem commGroup_hasPolynomialGrowth {G : Type*} [CommGroup G] [Group.FG G] :
   -- Transfer through the equivalence
   exact hasPolynomialGrowth_of_mulEquiv φ hprod
 
-end PolynomialGrowth
+end
+
+end Gromov.PolynomialGrowth

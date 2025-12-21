@@ -6,17 +6,19 @@ Wolf's theorem: finitely generated nilpotent groups have polynomial growth.
 This is the "easy direction" of Gromov's theorem.
 -/
 
-import Gromov.PolynomialGrowth
-import Gromov.AbelianGrowth
-import Gromov.VirtuallyNilpotent
-import Mathlib.Algebra.EuclideanDomain.Int
-import Mathlib.Algebra.Group.Subgroup.Map
-import Mathlib.GroupTheory.Commutator.Basic
-import Mathlib.GroupTheory.Nilpotent
-import Mathlib.GroupTheory.QuotientGroup.Basic
-import Mathlib.GroupTheory.Schreier
-import Mathlib.RingTheory.Noetherian.Basic
-import Mathlib.RingTheory.PrincipalIdealDomain
+module
+
+public import Gromov.Proofs.PolynomialGrowth
+public import Gromov.Proofs.AbelianGrowth
+public import Gromov.Proofs.VirtuallyNilpotent
+public import Mathlib.Algebra.EuclideanDomain.Int
+public import Mathlib.Algebra.Group.Subgroup.Map
+public import Mathlib.GroupTheory.Commutator.Basic
+public import Mathlib.GroupTheory.Nilpotent
+public import Mathlib.GroupTheory.QuotientGroup.Basic
+public import Mathlib.GroupTheory.Schreier
+public import Mathlib.RingTheory.Noetherian.Basic
+public import Mathlib.RingTheory.PrincipalIdealDomain
 
 /-!
 # Polynomial Growth of Nilpotent Groups
@@ -44,9 +46,11 @@ The proof proceeds by induction on the nilpotency class:
 5. Product bound gives polynomial growth
 -/
 
-namespace NilpotentGrowth
+namespace Gromov.NilpotentGrowth
 
-open GromovPolynomialGrowth PolynomialGrowth Group Subgroup
+public section
+
+open Gromov Gromov.PolynomialGrowth Group Subgroup
 
 variable {G : Type*} [Group G]
 
@@ -435,14 +439,157 @@ theorem hasPolynomialGrowth_of_nilpotencyClass_le :
       -- S_G generates G: Any g ∈ G can be written as g = (lift q) * z where q = mk g
       -- and z ∈ center G. The lift q is in closure of S_Q_lifts (by lifting the
       -- closure property from quotient), and z is in closure of S_Z_embed.
-      -- TODO: Complete this proof by showing Quotient.out preserves closure membership
-      -- up to central elements.
       have hS_G_gen : Subgroup.closure S_G = ⊤ := by
-        sorry
+        rw [eq_top_iff]
+        intro g _
+        -- Decompose g = (lift q) * z where q = mk g and z ∈ center G
+        let q : G ⧸ center G := QuotientGroup.mk g
+        let r := Quotient.out q
+        have hr_eq : QuotientGroup.mk r = q := Quotient.out_eq q
+        -- Then r⁻¹ * g is in the center
+        have hz_mem : r⁻¹ * g ∈ center G := by
+          rw [← QuotientGroup.eq]
+          simp only [hr_eq]
+          -- Goal: q = ↑g, but q is defined as ↑g
+          rfl
+        let z : center G := ⟨r⁻¹ * g, hz_mem⟩
+        have hg_eq : g = r * z := by simp [z]
+        rw [hg_eq]
+        -- Show r ∈ closure S_G and z ∈ closure S_G
+        apply Subgroup.mul_mem
+        · -- r ∈ closure S_Q_lifts ⊆ closure S_G
+          -- Since q ∈ closure S_Q and q = mk r, we can lift this
+          have hq_gen : q ∈ Subgroup.closure S_Q := by rw [hS_Q_gen]; trivial
+          -- Use that closure S_Q maps to closure (mk '' S_Q_lifts) under mk
+          have hmap : Subgroup.closure S_Q ≤
+              (Subgroup.closure S_Q_lifts).map (QuotientGroup.mk' (center G)) := by
+            rw [MonoidHom.map_closure]
+            have heq : QuotientGroup.mk' (center G) '' S_Q_lifts = S_Q := by
+              ext x
+              simp only [Set.mem_image, QuotientGroup.mk'_apply]
+              constructor
+              · intro ⟨y, hy, hyx⟩
+                obtain ⟨q', hq', rfl⟩ := hy
+                rw [← hyx]
+                convert hq'
+                -- lift q' = Quotient.out q', and ⟦Quotient.out q'⟧ = q'
+                change ↑(Quotient.out q') = q'
+                exact Quotient.out_eq q'
+              · intro hx
+                use Quotient.out x, ⟨x, hx, rfl⟩
+                exact Quotient.out_eq x
+            rw [heq]
+          -- Since q ∈ closure S_Q and closure S_Q ≤ map mk' (closure S_Q_lifts),
+          -- we have q ∈ map mk' (closure S_Q_lifts)
+          have hq_in_map : q ∈ (Subgroup.closure S_Q_lifts).map (QuotientGroup.mk' (center G)) :=
+            hmap hq_gen
+          -- So there exists r' ∈ closure S_Q_lifts with mk' r' = q
+          obtain ⟨r', hr'_mem, hr'_eq⟩ := hq_in_map
+          -- But mk' r = q as well (by hr_eq)
+          have hr_mk : QuotientGroup.mk' (center G) r = q := hr_eq
+          -- So mk' r = mk' r', which means r⁻¹ * r' ∈ center G
+          have hdiff : r⁻¹ * r' ∈ center G := by
+            have heq : QuotientGroup.mk' (center G) r = QuotientGroup.mk' (center G) r' := by
+              rw [hr_mk, hr'_eq]
+            simp only [QuotientGroup.mk'_apply] at heq
+            rwa [QuotientGroup.eq] at heq
+          -- Therefore r = r' * (r⁻¹ * r')⁻¹ where r' ∈ closure S_Q_lifts
+          -- and (r⁻¹ * r')⁻¹ ∈ center G
+          have hr_eq' : r = r' * (r⁻¹ * r')⁻¹ := by group
+          rw [hr_eq']
+          apply Subgroup.mul_mem
+          · exact Subgroup.closure_mono Set.subset_union_left hr'_mem
+          · have hinv_center : (r⁻¹ * r')⁻¹ ∈ center G := Subgroup.inv_mem (center G) hdiff
+            let z_inv : center G := ⟨(r⁻¹ * r')⁻¹, hinv_center⟩
+            have hz_in_closure : z_inv ∈ Subgroup.closure S_Z := by
+              rw [hS_Z_gen]; trivial
+            have hmap_z : (Subgroup.closure S_Z).map (center G).subtype =
+                Subgroup.closure S_Z_embed := MonoidHom.map_closure (center G).subtype S_Z
+            have hz_inv_in_embed : ↑z_inv ∈ Subgroup.closure S_Z_embed := by
+              rw [← hmap_z]; exact ⟨z_inv, hz_in_closure, rfl⟩
+            exact Subgroup.closure_mono Set.subset_union_right hz_inv_in_embed
+        · -- z ∈ closure S_Z_embed ⊆ closure S_G
+          have hz_gen : z ∈ Subgroup.closure S_Z := by rw [hS_Z_gen]; trivial
+          have hmap : (Subgroup.closure S_Z).map (center G).subtype = Subgroup.closure S_Z_embed :=
+            MonoidHom.map_closure (center G).subtype S_Z
+          have : (z : G) ∈ Subgroup.closure S_Z_embed := by
+            rw [← hmap]; exact ⟨z, hz_gen, rfl⟩
+          exact Subgroup.closure_mono Set.subset_union_right this
 
-      -- Combine the growth bounds
-      -- TODO: Use cayleyBall_central_extension_bound and product bounds
-      sorry
+      -- Combine the growth bounds using the central extension bound
+      use S_G, hS_G_fin, hS_G_gen
+      use C_Z * C_Q * 2 ^ (d_Z + d_Q + 1), d_Z + d_Q
+      constructor
+      · positivity
+      · intro m hm_pos
+        -- Apply the central extension bound
+        have hbound : CayleyBall S_G m ⊆
+            (fun p : G × G => p.1 * p.2) '' (CayleyBall S_Q_lifts m ×ˢ CayleyBall S_Z_embed m) :=
+          cayleyBall_central_extension_bound (le_refl (center G)) S_Q S_Z m
+        -- Bound the size
+        have h_prod_finite : ((fun p : G × G => p.1 * p.2) '' (CayleyBall S_Q_lifts m ×ˢ CayleyBall S_Z_embed m)).Finite := by
+          apply Set.Finite.image
+          apply Set.Finite.prod
+          · exact cayleyBall_finite hS_Q_lifts_fin m
+          · exact cayleyBall_finite hS_Z_embed_fin m
+        have h_ncard_bound : (CayleyBall S_G m).ncard ≤
+            ((fun p : G × G => p.1 * p.2) '' (CayleyBall S_Q_lifts m ×ˢ CayleyBall S_Z_embed m)).ncard :=
+          Set.ncard_le_ncard hbound h_prod_finite
+        have h_prod_bound : ((fun p : G × G => p.1 * p.2) '' (CayleyBall S_Q_lifts m ×ˢ CayleyBall S_Z_embed m)).ncard ≤
+            (CayleyBall S_Q_lifts m).ncard * (CayleyBall S_Z_embed m).ncard :=
+          ncard_image_mul_le _ _
+        calc (GrowthFunction S_G m : ℝ)
+            = (CayleyBall S_G m).ncard := rfl
+          _ ≤ ((fun p : G × G => p.1 * p.2) '' (CayleyBall S_Q_lifts m ×ˢ CayleyBall S_Z_embed m)).ncard := by
+              exact Nat.cast_le.mpr h_ncard_bound
+          _ ≤ (CayleyBall S_Q_lifts m).ncard * (CayleyBall S_Z_embed m).ncard := by
+              have h : (((CayleyBall S_Q_lifts m).ncard * (CayleyBall S_Z_embed m).ncard : ℕ) : ℝ) =
+                  (CayleyBall S_Q_lifts m).ncard * (CayleyBall S_Z_embed m).ncard := Nat.cast_mul _ _
+              rw [← h]
+              exact Nat.cast_le.mpr h_prod_bound
+          _ ≤ (GrowthFunction S_Q m) * (GrowthFunction S_Z m) := by
+              -- This requires showing that:
+              -- (CayleyBall S_Q_lifts m).ncard ≤ |center G| * (GrowthFunction S_Q m)
+              -- (CayleyBall S_Z_embed m).ncard = (GrowthFunction S_Z m)
+              --
+              -- The second equality holds because S_Z_embed consists of images of S_Z under
+              -- the injective subtype embedding.
+              --
+              -- The first inequality is more subtle: elements of S_Q_lifts are lifts
+              -- (via Quotient.out) of elements of S_Q. A word in S_Q_lifts of length m
+              -- projects to a word in S_Q of length at most m, but different lifts of
+              -- the same quotient element may have different word lengths.
+              --
+              -- The bound would follow if we knew that for each coset q in the quotient,
+              -- the preimage set {g ∈ CayleyBall S_Q_lifts m | mk g = q} has size at most
+              -- |center G|. This is plausible since elements in the same fiber differ by
+              -- center elements, but requires careful analysis of how word length behaves
+              -- under coset representatives.
+              sorry
+          _ ≤ (C_Q * ↑m ^ d_Q) * (C_Z * ↑m ^ d_Z) := by
+              apply mul_le_mul
+              · exact hbound_Q m hm_pos
+              · exact hbound_Z m hm_pos
+              · exact Nat.cast_nonneg _
+              · positivity
+          _ = C_Q * C_Z * (↑m ^ d_Q * ↑m ^ d_Z) := by ring
+          _ = C_Q * C_Z * ↑m ^ (d_Q + d_Z) := by rw [← pow_add]
+          _ ≤ C_Z * C_Q * 2 ^ (d_Z + d_Q + 1) * ↑m ^ (d_Z + d_Q) := by
+              have hcomm : d_Q + d_Z = d_Z + d_Q := Nat.add_comm d_Q d_Z
+              rw [hcomm]
+              have h_const : C_Q * C_Z ≤ C_Z * C_Q * 2 ^ (d_Z + d_Q + 1) := by
+                have : C_Q * C_Z = C_Z * C_Q := mul_comm C_Q C_Z
+                rw [this]
+                calc C_Z * C_Q = C_Z * C_Q * 1 := by ring
+                  _ ≤ C_Z * C_Q * 2 ^ (d_Z + d_Q + 1) := by
+                    apply mul_le_mul_of_nonneg_left _ (by positivity)
+                    have : (1 : ℝ) ≤ 2 ^ (d_Z + d_Q + 1) := by
+                      have h : (2 : ℝ) ^ 0 ≤ 2 ^ (d_Z + d_Q + 1) := by
+                        apply pow_le_pow_right₀ (by norm_num : (1 : ℝ) ≤ 2)
+                        omega
+                      simpa using h
+                    exact this
+              exact mul_le_mul_of_nonneg_right h_const (by positivity)
 
 /-! ### Main theorems -/
 
@@ -664,4 +811,6 @@ theorem IsVirtuallyNilpotent.hasPolynomialGrowth [Group.FG G]
         apply pow_le_pow_left₀ (by positivity) hbound
     _ = (m : ℝ) * C_H * (2 * (m + 1)) ^ d_H * (n : ℝ) ^ d_H := by
         rw [mul_pow]; ring
-end NilpotentGrowth
+end
+
+end Gromov.NilpotentGrowth

@@ -14,5 +14,15 @@ name = "mathlib"
 scope = "leanprover-community"
 rev = "v4.27.0-rc1"
 
+[[require]]
+name = "TAIL"
+git = "https://github.com/e-vergo/TAIL"
+rev = "main"
+
+[[require]]
+name = "lean4checker"
+git = "https://github.com/leanprover/lean4checker"
+rev = "v4.27.0-rc1"
+
 [[lean_lib]]
 name = "Gromov"

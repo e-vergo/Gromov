@@ -15,23 +15,23 @@ The main structure of Kleiner's proof proceeds by induction on the polynomial gr
 This file sets up the key definitions and theorem statements for this descent argument.
 -/
 
-import Gromov.PolynomialGrowth
-import Gromov.VirtuallyNilpotent
+module
+
+public import Gromov.Definitions.Descent
+public import Gromov.Proofs.PolynomialGrowth
+public import Gromov.Proofs.VirtuallyNilpotent
 
 set_option linter.style.longLine false
 
-namespace Descent
+namespace Gromov.Descent
 
-open GromovPolynomialGrowth PolynomialGrowth Group
+public section
+
+open Gromov Gromov.PolynomialGrowth Group
 
 variable {G : Type*} [Group G]
 
 /-! ## Infinite Cyclic Quotient -/
-
-/-- A group `G` has an infinite cyclic quotient if there exists a surjective homomorphism
-    from `G` onto `Multiplicative ℤ` (the multiplicative version of the integers). -/
-def HasInfiniteCyclicQuotient (G : Type*) [Group G] : Prop :=
-  ∃ φ : G →* Multiplicative ℤ, Function.Surjective φ
 
 /-- Having an infinite cyclic quotient is equivalent to having a normal subgroup
     with quotient isomorphic to Z. -/
@@ -57,24 +57,6 @@ theorem kernel_normal_of_surj_to_Z (φ : G →* Multiplicative ℤ) :
   MonoidHom.normal_ker φ
 
 /-! ## Polynomial Growth Degree for Groups -/
-
-/-- The polynomial growth degree of a finitely generated group, defined as the infimum
-    of exponents d such that some generating set has growth function bounded by C * n^d.
-
-    For a group without polynomial growth, this returns 0 by convention (sInf of empty set).
-    For finite groups, this is 0.
-    For Z, this is 1.
-    For Z^n, this is n.
--/
-noncomputable def PolynomialGrowthDegree (G : Type*) [Group G] : ℕ :=
-  sInf {d : ℕ | ∃ (S : Set G), S.Finite ∧ Subgroup.closure S = ⊤ ∧
-    ∃ C : ℝ, C > 0 ∧ ∀ n > 0, (GrowthFunction S n : ℝ) ≤ C * (n : ℝ) ^ d}
-
-/-- A group has polynomial growth of degree at most d if there exists a finite generating set
-    whose growth function is bounded by C * n^d. -/
-def HasPolynomialGrowthDegree (G : Type*) [Group G] (d : ℕ) : Prop :=
-  ∃ (S : Set G), S.Finite ∧ Subgroup.closure S = ⊤ ∧
-    ∃ C : ℝ, C > 0 ∧ ∀ n > 0, (GrowthFunction S n : ℝ) ≤ C * (n : ℝ) ^ d
 
 /-- If a group has polynomial growth of degree d, then it has polynomial growth of degree d' for any d' ≥ d. -/
 theorem hasPolynomialGrowthDegree_mono {d d' : ℕ} (hdd' : d ≤ d')
@@ -139,6 +121,176 @@ The full proof requires:
 -/
 theorem infinite_cyclic_quotient_of_polynomial_growth [Infinite G] [FG G]
     (h : HasPolynomialGrowth G) : HasInfiniteCyclicQuotient G := by
+  /-
+  PROOF OUTLINE (Kleiner/Tao-Shalom approach):
+
+  This is the deepest theorem in the descent argument. It requires substantial
+  infrastructure from harmonic analysis on Cayley graphs that is not yet formalized.
+
+  ═══════════════════════════════════════════════════════════════════════════════
+  STAGE 1: Existence of Non-trivial Lipschitz Harmonic Functions
+  ═══════════════════════════════════════════════════════════════════════════════
+
+  Theorem (Tao blog, §2): Every infinite f.g. group G admits a non-constant
+  function f : G → ℝ that is both harmonic and Lipschitz.
+
+  Proof strategy:
+  - Define μ = (1/|S|) ∑_{s∈S} δ_s (averaging measure)
+  - Consider f_n = (1/n) ∑_{m=1}^n μ^{(*m)} (Cesàro averages)
+  - These are "asymptotically harmonic": ‖f_n - f_n * μ‖ = O(1/n)
+
+  Two cases:
+
+  NON-AMENABLE CASE:
+  If ‖f_n - f_n * δ_s‖_{ℓ¹} does not vanish, use duality to find H_n with
+  |H_n * f_n(id) - H_n * f_n(s)| > ε. Take a subsequence limit via
+  Banach-Alaoglu to get a bounded harmonic function.
+
+  AMENABLE CASE (relevant for polynomial growth):
+  If ‖f_n - f_n * δ_s‖_{ℓ¹} → 0, then the discrete Laplacian Δ = I - μ*
+  has spectrum accumulating at 0. Using the spectral theorem, construct
+  a sequence G_n with ‖ΔG_n‖_{ℓ²} → 0 but ∑ G_n(g) ΔG_n(g) = 1.
+  The Dirichlet energy identity gives:
+    ∑_g G_n(g) ΔG_n(g) = (1/2|S|) ∑_s ‖G_n - G_n * δ_s‖²_{ℓ²}
+  Thus G_n is uniformly Lipschitz and asymptotically harmonic.
+  By Arzelá-Ascoli, a subsequence converges to a non-trivial Lipschitz
+  harmonic function.
+
+  REQUIRED INFRASTRUCTURE:
+  - Spectral theorem for self-adjoint operators on ℓ²(G)
+  - Arzelá-Ascoli theorem for locally compact metric spaces
+  - Banach-Alaoglu theorem (weak-* compactness)
+  - Dirichlet energy identity for discrete Laplacian
+
+  ═══════════════════════════════════════════════════════════════════════════════
+  STAGE 2: Finite-Dimensionality via Elliptic Regularity
+  ═══════════════════════════════════════════════════════════════════════════════
+
+  Theorem (Kleiner, based on Colding-Minicozzi): If G has polynomial growth,
+  then the space V of L-Lipschitz harmonic functions (vanishing at id) is
+  finite-dimensional.
+
+  Proof strategy:
+  For any Lipschitz harmonic functions u_1, ..., u_D, consider the Gram matrix
+    Q_R(u_i, u_j) = ∑_{g ∈ B_S(R)} u_i(g) u_j(g)
+
+  From Lipschitz property: det(Q_R) ≤ C R^D as R → ∞
+  From monotonicity: det(Q_R) ≤ det(Q_{4R})
+
+  Key lemma (Elliptic regularity, Tao §3 Lemma 6):
+  If f is harmonic and has mean zero on many small balls of radius εR
+  covering B_S(4R), then
+    ‖f‖_{L²(B_S(R))} ≤ ε‖f‖_{L²(B_S(4R))}
+
+  This is proved using:
+  1. REVERSE POINCARÉ: For harmonic f,
+     ∑_{x ∈ B(2R)} |∇f(x)|² ≤ C R^{-2} ∑_{x ∈ B(4R)} |f(x)|²
+  2. POINCARÉ INEQUALITY: For any f with mean zero on B(r),
+     ∑_{x ∈ B(r)} |f(x)|² ≤ C r² |B(r)| ∑_{x ∈ B(3r)} |∇f(x)|²
+
+  Combining these with bounded doubling from polynomial growth:
+  - Cover B_S(4R) by O_ε(1) balls of radius εR
+  - Subspace of functions with mean zero on all balls has codimension O_ε(1)
+  - On this subspace: Q_R ≤ O(ε) Q_{4R}
+  - Get improved bound: det(Q_R) ≤ O(ε)^{D - O_ε(1)} det(Q_{4R})
+
+  For ε small and D large, this growth rate contradicts det(Q_R) ≤ C R^D.
+  Thus D is bounded, proving finite-dimensionality.
+
+  REQUIRED INFRASTRUCTURE:
+  - Reverse Poincaré inequality for harmonic functions
+  - Standard Poincaré inequality on balls
+  - Bounded doubling property from polynomial growth
+  - Linear algebra for Gram determinants
+  - Covering lemmas for metric spaces
+
+  ═══════════════════════════════════════════════════════════════════════════════
+  STAGE 3: Extracting the ℤ Quotient via Representation Theory
+  ═══════════════════════════════════════════════════════════════════════════════
+
+  Now we have a finite-dimensional space V of Lipschitz harmonic functions.
+  G acts on V by left translation: (g · f)(x) = f(g⁻¹x).
+
+  Constants are preserved, so G acts on W := V/ℝ (quotient by constants).
+  Since all Lipschitz harmonic functions vanishing at id form a normed space,
+  this action is by bounded linear operators.
+
+  The unit sphere in W is compact (finite-dimensional), and the action of G
+  preserves the Lipschitz norm up to constants, so the image of G in GL(W)
+  is precompact. Its closure is a compact Lie group.
+
+  Theorem (Jordan, Tao §4 Theorem 7): Every finite subgroup of U(n) has an
+  abelian subgroup of index ≤ C_n (depending only on n).
+
+  Proof uses the commutator estimate for unitary matrices:
+    ‖[g,h] - I‖ ≤ 2‖g - I‖ ‖h - I‖
+  If g, h are close to I, their commutator is even closer.
+
+  Applying Jordan to our situation, the image of G in GL(W) is either:
+
+  CASE A: Finite image
+    Then a finite-index subgroup G' acts trivially on W.
+    The action on V is then by translations: g·f = f + λ_g(f)
+    where λ_g ∈ V* is a linear functional.
+
+    If the map g ↦ λ_g has infinite image, we get a homomorphism G → ℤ (done!).
+
+    If the map g ↦ λ_g has finite image, then a further finite-index subgroup
+    G'' acts trivially on V entirely. But then all Lipschitz harmonic functions
+    are G''-invariant.
+
+    Maximum principle: A harmonic function that is constant on cosets of a
+    finite-index subgroup must be globally constant (use harmonicity at the
+    average value on each coset).
+
+    This contradicts the existence of non-trivial Lipschitz harmonic functions
+    from Stage 1.
+
+  CASE B: Infinite image
+    Then some finite-index subgroup G' maps into an infinite virtually abelian
+    subgroup of GL(W). An infinite f.g. virtually abelian group contains ℤ
+    as a quotient, giving us the desired homomorphism G → ℤ.
+
+  REQUIRED INFRASTRUCTURE:
+  - Jordan's theorem for finite subgroups of GL_n
+  - Maximum principle for harmonic functions
+  - Compactness of unit sphere in finite dimensions
+  - Abelian groups contain ℤ quotients (when infinite f.g.)
+  - Linear algebra for quotient spaces V/ℝ
+
+  ═══════════════════════════════════════════════════════════════════════════════
+  SUMMARY OF MISSING INFRASTRUCTURE
+  ═══════════════════════════════════════════════════════════════════════════════
+
+  The proof requires approximately 1000-2000 lines of supporting material:
+
+  ANALYSIS & FUNCTIONAL ANALYSIS:
+  - Spectral theorem for discrete Laplacian on ℓ²(G)
+  - Arzelá-Ascoli theorem
+  - Banach-Alaoglu theorem
+  - Compactness theorems for bounded Lipschitz functions
+
+  HARMONIC FUNCTION THEORY:
+  - Reverse Poincaré inequality
+  - Dirichlet energy identities
+  - Maximum principle for discrete harmonic functions
+  - Elliptic regularity estimates
+
+  GROUP THEORY & REPRESENTATION THEORY:
+  - Jordan's theorem (finite subgroups of GL_n)
+  - Compact Lie group structure theory
+  - Representation theory for f.g. groups
+  - Quotient extraction from abelian representations
+
+  GEOMETRIC GROUP THEORY:
+  - Bounded doubling from polynomial growth
+  - Covering lemmas for Cayley graphs
+  - Volume growth estimates
+
+  See Descent_helper.lean for axiomatized versions of the key lemmas.
+  A complete formalization of this theorem would be a substantial project
+  requiring collaboration between analysts and group theorists.
+  -/
   sorry
 
 /-- If G → Z is surjective with kernel K, and G has polynomial growth degree d > 0,
@@ -220,7 +372,11 @@ theorem kernel_fg_of_surj_to_Z_of_virtuallyNilpotent [FG G] (φ : G →* Multipl
   -- Strategy: Use that virtually nilpotent groups are polycyclic,
   -- and polycyclic groups have the property that all subgroups are FG.
   -- The kernel φ.ker is a subgroup of G, hence FG.
-  sorry
+
+  -- G is virtually nilpotent and finitely generated, hence polycyclic
+  rw [isVirtuallyNilpotent_iff_polycyclic] at hG
+  -- Subgroups of polycyclic groups are finitely generated
+  exact Subgroup.fg_of_polycyclic hG φ.ker
 
 /-- If K is virtually nilpotent and G/K ≅ Z, then G is virtually nilpotent.
 
@@ -276,35 +432,36 @@ theorem isVirtuallyNilpotent_of_extension_by_Z (K : Subgroup G) [K.Normal] [FG K
   haveI : IsNilpotent N := hN_nil
 
   /-
-  Complete proof strategy (requires additional infrastructure):
+  Complete proof requires several pieces of missing infrastructure:
 
-  Since G/K ≃* ℤ, pick t ∈ G with φ(t) = 1 where φ : G →* Multiplicative ℤ.
-  Then G = ⟨K, t⟩.
+  Key Challenge: N is of type `Subgroup ↥K` (subgroup of the carrier type of K),
+  but we need a `Subgroup G` (subgroup of G) that is normal in G, nilpotent, and has finite index.
 
-  Key lemma needed: In a f.g. group, there are finitely many subgroups of any
-  given finite index. This follows from the correspondence:
-    {index-n subgroups of H} ↔ {transitive actions of H on Fin n}
-  The right side is finite when H is f.g.
+  The mathematical idea:
+  1. Map N to G via M = Subgroup.map K.subtype N (this gives M ≤ K as a subgroup of G)
+  2. Take normal closure or intersection of G-conjugates of M
+  3. Use that K is FG, so finitely many distinct conjugates (by counting subgroups of given index)
+  4. Intersection of finitely many finite-index subgroups has finite index
+  5. This intersection is normal in G and nilpotent
 
-  Using this lemma:
-  - The conjugates t^m N t^{-m} for m ∈ ℤ are all subgroups of K with the
-    same index as N (since K is normal in G).
-  - By the lemma, this set is finite, so there exists period p with
-    t^p N t^{-p} = N.
-  - Define L = ⟨N, t^p⟩ ≤ G. Then [G : L] divides p · [K : N] < ∞.
-  - L is a semidirect product N ⋊ ⟨t^p⟩ where t^p normalizes N.
-  - Since N is nilpotent and the action of t^p is by an automorphism that
-    preserves the lower central series, L is virtually nilpotent.
+  Missing infrastructure in current Mathlib/codebase:
+  - Lemma: FG groups have finitely many subgroups of any given index
+  - Lemma: Subgroup.map preserves nilpotency (with appropriate equivalence)
+  - Lemma: Composition/tower law for finite index: [G:M] = [G:K]·[K:N]
+  - Lemma: Normal closure construction and properties
+  - Or alternatively: Direct construction showing N lifts to normal subgroup of G
 
-  The final step uses that semidirect products of nilpotent groups by cyclic
-  groups, where the action respects nilpotency, are virtually nilpotent.
-  This follows from the fact that the automorphism t^p has finite order on
-  N/[N,N] (which is a f.g. abelian group with finitely many automorphisms
-  of any given order).
+  The standard approach in group theory textbooks uses one of:
+  (a) Correspondence theorem + lifting normal subgroups through short exact sequences
+  (b) Frattini argument for finite-index normal subgroups
+  (c) Direct construction via semidirect product structure when G/K ≅ ℤ
+
+  For approach (c): Since G/K ≅ ℤ, pick t ∈ G mapping to generator. Then G = ⟨K,t⟩ where
+  conjugation by t permutes finite-index subgroups of K. The intersection ⋂ₘ tᵐNt⁻ᵐ has
+  finite index (finitely many distinct conjugates) and is t-invariant, hence normal in G.
+
+  This is a cornerstone result but requires careful formalization. Leaving as sorry.
   -/
-
-  -- TODO: Implement the lemma about finitely many subgroups of given index
-  -- in finitely generated groups, then complete this proof.
   sorry
 
 /-- Alternative formulation using a surjective homomorphism directly.
@@ -511,4 +668,6 @@ theorem not_polynomialGrowthDegree_zero_int : ¬HasPolynomialGrowthDegree (Multi
   haveI : Infinite (Multiplicative ℤ) := Infinite.of_injective _ h_inj
   exact @not_finite (Multiplicative ℤ) _ h_finite
 
-end Descent
+end
+
+end Gromov.Descent

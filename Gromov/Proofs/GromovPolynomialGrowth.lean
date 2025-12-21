@@ -1,31 +1,28 @@
 /-
-Copyright 2025 The Formal Conjectures Authors.
+Copyright 2025 The Gromov Project Authors.
 SPDX-License-Identifier: Apache-2.0
 
-Gromov's theorem on groups of polynomial growth.
+Lemmas about Cayley balls and growth functions.
 -/
 
-import Mathlib.Algebra.Group.Subgroup.Basic
-import Mathlib.GroupTheory.FreeGroup.Basic
-import Mathlib.GroupTheory.Nilpotent
-import Mathlib.GroupTheory.Finiteness
-import Mathlib.GroupTheory.Index
-import Mathlib.Order.Filter.AtTopBot.Basic
-import Mathlib.Order.Filter.AtTopBot.Finset
-import Mathlib.Data.Set.Card
-import Mathlib.Data.Finset.Card
-import Mathlib.Data.Real.Archimedean
+module
 
-namespace GromovPolynomialGrowth
+public import Gromov.Definitions.PolynomialGrowth
+public import Mathlib.GroupTheory.FreeGroup.Basic
+public import Mathlib.GroupTheory.Nilpotent
+public import Mathlib.GroupTheory.Index
+public import Mathlib.Order.Filter.AtTopBot.Basic
+public import Mathlib.Order.Filter.AtTopBot.Finset
+public import Mathlib.Data.Finset.Card
+public import Mathlib.Data.Real.Archimedean
+
+namespace Gromov
+
+public section
 
 open Filter
 
 variable {G : Type*} [Group G]
-
-/-- The Cayley ball of radius `n` with respect to generating set `S`:
-    elements expressible as products of at most `n` generators or their inverses. -/
-def CayleyBall (S : Set G) (n : ℕ) : Set G :=
-  {g : G | ∃ (l : List G), l.length ≤ n ∧ (∀ s ∈ l, s ∈ S ∨ s⁻¹ ∈ S) ∧ l.prod = g}
 
 theorem cayleyBall_zero (S : Set G) :
     CayleyBall S 0 = {1} := by simp [CayleyBall]
@@ -38,10 +35,6 @@ lemma cayleyBall_finite {S : Set G} (hS : S.Finite) (n : ℕ) : (CayleyBall S n)
     ((Set.finite_le_nat n).biUnion fun m _ ↦ (hf m).image List.ofFn).subset
       fun l ⟨hl, hlS⟩ ↦ Set.mem_biUnion hl ⟨fun i ↦ l[i], by aesop⟩
   exact (this.image List.prod).subset fun _ _ ↦ by aesop (add simp [CayleyBall])
-
-/-- The growth function counts elements in the Cayley ball of radius `n`. -/
-noncomputable def GrowthFunction (S : Set G) (n : ℕ) : ℕ :=
-  (CayleyBall S n).ncard
 
 theorem growthFunction_zero (S : Set G) :
     GrowthFunction S 0 = 1 := by
@@ -107,7 +100,6 @@ theorem tendsto_atTop_growthFunction_of_infinite [Infinite G] {S : Set G} (hS : 
     (h : Subgroup.closure S = ⊤) : atTop.Tendsto (GrowthFunction S) atTop := by
   rw [Filter.tendsto_atTop_atTop]
   intro b
-  -- For any bound b, find n such that the ball has ≥ b elements
   obtain ⟨elems, helems⟩ := Infinite.exists_subset_card_eq G b
   choose n hn using fun (x : elems) ↦ exists_cayleyBall_mem_of_closure_eq_top h x.1
   use Finset.sup (Finset.univ : Finset elems) n
@@ -135,13 +127,6 @@ theorem growthFunction_not_polynomial_of_infinite [Infinite G] {S : Set G} (hS :
       Nat.cast_pos, growthFunction_zero]
     norm_num
 
-variable (G)
+end
 
-/-- A group has polynomial growth if there exists a finite generating set `S` such that
-    the growth function is bounded by a polynomial. -/
-def HasPolynomialGrowth : Prop :=
-  ∃ (S : Set G), Set.Finite S ∧ Subgroup.closure S = ⊤ ∧
-    ∃ (C : ℝ) (d : ℕ), C > 0 ∧
-    ∀ n > 0, (GrowthFunction S n : ℝ) ≤ C * (n : ℝ) ^ d
-
-end GromovPolynomialGrowth
+end Gromov
