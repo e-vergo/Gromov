@@ -16,6 +16,9 @@ import Gromov.Proofs.GromovPolynomialGrowth
 import Gromov.Proofs.CayleyGraph
 import Gromov.Proofs.PolynomialGrowth
 import Gromov.Proofs.VirtuallyNilpotent
+import Gromov.Proofs.Polycyclic
+import Gromov.Proofs.ResiduallyFinite
+import Gromov.Proofs.VirtualNilpotencyClass
 import Gromov.Proofs.NilpotentGrowth
 import Gromov.Proofs.AbelianGrowth
 import Gromov.Proofs.Descent

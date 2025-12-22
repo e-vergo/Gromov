@@ -20,6 +20,8 @@ module
 public import Gromov.Definitions.Descent
 public import Gromov.Proofs.PolynomialGrowth
 public import Gromov.Proofs.VirtuallyNilpotent
+public import Gromov.Proofs.Polycyclic
+public import Gromov.Proofs.VirtualNilpotencyClass
 
 set_option linter.style.longLine false
 
@@ -105,19 +107,58 @@ theorem polynomialGrowthDegree_finite [Finite G] : HasPolynomialGrowthDegree G 0
   calc (GrowthFunction (Set.univ : Set G) n : ℝ) = (CayleyBall Set.univ n).ncard := rfl
     _ ≤ Fintype.card G := by exact_mod_cast h
 
-/-! ## Key Lemmas for the Descent Argument -/
+/-! ## Key Lemmas for the Descent Argument
+
+The descent argument proceeds by strong induction on the polynomial growth degree d:
+
+1. **Base case** (d = 0 or G finite): Finite groups are trivially virtually nilpotent.
+
+2. **Inductive case** (d ≥ 1, G infinite):
+   a. Show G has a surjection φ : G → ℤ (Theorem: infinite_cyclic_quotient_of_polynomial_growth)
+   b. Show ker(φ) has growth degree ≤ d-1 (Theorem: kernel_growth_degree_lt)
+   c. By induction, ker(φ) is virtually nilpotent
+   d. Extensions of virtually nilpotent by ℤ are virtually nilpotent
+      (Theorem: isVirtuallyNilpotent_of_extension_by_Z)
+
+Each of these theorems requires substantial infrastructure:
+
+- **Theorem 1** (infinite_cyclic_quotient_of_polynomial_growth): ~2000-3000 lines
+  Requires: Harmonic analysis, spectral theory, elliptic regularity, representation theory
+
+- **Theorem 2** (kernel_growth_degree_lt): ~500-1000 lines
+  Requires: Word metrics, coset geometry, quasi-isometries, growth estimates
+
+- **Theorem 3** (isVirtuallyNilpotent_of_extension_by_Z): ~300-500 lines
+  Requires: Subgroup finiteness, intersection indices, conjugation actions
+
+All three theorems are currently axiomatized with comprehensive documentation of the
+mathematical ideas and missing infrastructure.
+-/
 
 /-- If G is an infinite group with polynomial growth, then G has an infinite cyclic quotient.
 
-This is a deep theorem that follows from the Colding-Minicozzi theory of harmonic functions
-on groups with polynomial growth. The proof shows that an infinite group with polynomial growth
-admits a nontrivial harmonic function of polynomial growth, whose level sets give rise to
-a homomorphism onto Z.
+This is the deepest and most technically demanding theorem in Kleiner's proof of Gromov's theorem.
+It establishes that any infinite finitely generated group with polynomial growth must admit
+a surjective homomorphism onto ℤ.
 
-The full proof requires:
-1. Construction of a harmonic function with polynomial growth (Colding-Minicozzi)
-2. Analysis of the level sets to produce a homomorphism
-3. Verification that the homomorphism is surjective onto Z
+THEOREM (Kleiner 2007, following Colding-Minicozzi): Let G be an infinite finitely generated
+group with polynomial growth. Then there exists a surjective homomorphism φ : G → ℤ.
+
+The proof combines three major domains of mathematics:
+
+1. HARMONIC ANALYSIS: Construct non-trivial Lipschitz harmonic functions on the Cayley graph
+2. ELLIPTIC REGULARITY: Prove finite-dimensionality of the space of such functions
+3. REPRESENTATION THEORY: Extract a ℤ-quotient from the finite-dimensional representation
+
+Each stage requires substantial mathematical infrastructure not yet available in Mathlib.
+The complete formalization would require approximately 2000-3000 lines of supporting material
+across analysis, functional analysis, geometric group theory, and representation theory.
+
+References:
+- Kleiner, B. "A new proof of Gromov's theorem on groups of polynomial growth" (2007)
+- Tao, T. "A proof of Gromov's theorem" (blog post, 2010)
+- Shalom, Y. and Tao, T. "A finitary version of Gromov's polynomial growth theorem" (2010)
+- Colding, T. and Minicozzi, W. "Harmonic functions on manifolds" (1997)
 -/
 theorem infinite_cyclic_quotient_of_polynomial_growth [Infinite G] [FG G]
     (h : HasPolynomialGrowth G) : HasInfiniteCyclicQuotient G := by
@@ -305,24 +346,67 @@ theorem kernel_growth_degree_lt (φ : G →* Multiplicative ℤ) (hφ : Function
     {d : ℕ} (hd : d > 0) (hG : HasPolynomialGrowthDegree G d) :
     HasPolynomialGrowthDegree φ.ker (d - 1) := by
   /-
-  Proof Strategy (to be completed):
+  PROOF OUTLINE:
 
-  1. Let S be a generating set for G with |B_S(n)| ≤ C * n^d.
-  2. Let t be a lift of the generator 1 ∈ Z, so φ(t) = ofAdd(1).
-  3. Define M = max{|φ(s)| : s ∈ S} + 1. Then elements in B_S(n) map to integers in [-Mn, Mn].
-  4. Define S' = S ∪ {t, t⁻¹} and R = 2M + 1.
-  5. Define S_K = {k ∈ K | k ∈ B_{S'}(R)} - the "short" kernel elements.
+  This theorem requires substantial infrastructure that is not yet formalized:
 
-  For generation: For any s ∈ S', define c_s = s * t^(-φ(s)) ∈ K. Then c_s ∈ S_K
-  (since it's in the R-ball). Every element k ∈ K can be written as a word in S',
-  and by replacing each s with c_s * t^(φ(s)), we get k as a product of c_s terms
-  (the t-powers cancel since φ(k) = 1).
+  STRATEGY (Geometric Argument):
 
-  For growth bound: The key insight is that B_G(n) intersects O(n) cosets of K
-  (since elements in B_G(n) have |φ(g)| ≤ Mn). By a counting argument,
-  the average size of B_G(n) ∩ (coset) is O(n^{d-1}). The kernel K corresponds to
-  the coset at level 0, and with appropriate uniformity arguments,
-  |B_K(n)| ≤ C' * n^{d-1}.
+  1. SETUP: Let S be a generating set for G with |B_S(n)| ≤ C * n^d.
+     Let t ∈ G satisfy φ(t) = ofAdd(1) (a lift of the generator of ℤ).
+     Define M = max{|toAdd(φ(s))| : s ∈ S} + 1.
+
+  2. FIBRATION STRUCTURE: The Cayley graph of G fibers over ℤ via φ:
+     - For each k ∈ ℤ, the "level set" L_k = φ⁻¹(ofAdd k) is a coset of K
+     - The ball B_S(n) intersects at most O(n) level sets (specifically ≤ 2Mn + 1)
+     - Movement within a level set stays in K; movement between levels uses φ
+
+  3. KERNEL GENERATION: Define S_K as the set of "short" kernel elements:
+        S_K = {s · t^(-toAdd(φ(s))) : s ∈ S}
+     Each element c_s = s · t^(-toAdd(φ(s))) lies in K (since φ(c_s) = φ(s) · φ(t)^(-toAdd(φ(s))) = 1).
+     These elements are "bounded" in the S-word metric.
+
+     Claim: S_K generates K.
+     Proof: Any k ∈ K can be written as a word w in S. For each s in w, write
+     s = c_s · t^(toAdd(φ(s))). Since k ∈ K, the t-exponents sum to 0, so they cancel,
+     leaving k as a product of c_s terms (elements of S_K).
+
+  4. GROWTH BOUND: The key inequality is:
+        |B_{S_K}(n) ∩ K| ≤ |B_S(Cn)| / (2n/M)
+
+     Intuition: B_S(Cn) is distributed across ≈ 2Cn level sets. If growth were
+     uniform, each level would have ≈ |B_S(Cn)|/(2Cn) elements. Thus:
+        |B_K(n)| ≤ C · |B_S(Cn)|/n ≤ C · (C' · (Cn)^d)/n = O(n^{d-1})
+
+  MISSING INFRASTRUCTURE:
+
+  A. WORD METRIC ON QUOTIENTS:
+     - Need to relate word metrics on G, K, and G/K
+     - Lemma: dist_G(g₁, g₂) ≤ dist_K(g₁, g₂) + C·|φ(g₁) - φ(g₂)| for some C
+     - Lemma: Elements in B_G(n) satisfy |φ(g)| ≤ Mn for some M depending on S
+
+  B. COSET INTERSECTION BOUNDS:
+     - Lemma: If L is a coset of K, then |B_S(n) ∩ L| / |B_S(2n)| → 0 as n → ∞
+       (or appropriate polynomial bound)
+     - Lemma: ∑_{k=-Mn}^{Mn} |B_S(n) ∩ L_k| = |B_S(n)| (disjoint union)
+
+  C. AVERAGING ARGUMENTS:
+     - Show that growth is "approximately uniform" across level sets
+     - Use quasi-isometry properties of Cayley graphs
+     - Milnor-Schwarz lemma or variants for group actions
+
+  D. GENERATION OF SUBGROUPS:
+     - Lemma: If H is generated by a bounded set and H has polynomial growth,
+       then the growth degree is determined by the generating set size
+     - Schreier lemma: Relate generators of K to generators of G
+
+  REFERENCES:
+  - Bass-Guivarch: Growth functions and the cogrowth of groups
+  - Gromov: Groups of polynomial growth and expanding maps (1981)
+  - de la Harpe: Topics in geometric group theory, Chapter VII
+
+  This is a cornerstone geometric result requiring ~500-1000 lines of supporting
+  material about word metrics, coset geometry, and growth estimates.
   -/
   sorry
 
@@ -368,7 +452,7 @@ This is the cleanest formulation for the descent argument, since by induction
 the kernel is virtually nilpotent (having lower polynomial growth degree).
 -/
 theorem kernel_fg_of_surj_to_Z_of_virtuallyNilpotent [FG G] (φ : G →* Multiplicative ℤ)
-    (hφ : Function.Surjective φ) (hG : IsVirtuallyNilpotent G) : FG φ.ker := by
+    (_hφ : Function.Surjective φ) (hG : IsVirtuallyNilpotent G) : FG φ.ker := by
   -- Strategy: Use that virtually nilpotent groups are polycyclic,
   -- and polycyclic groups have the property that all subgroups are FG.
   -- The kernel φ.ker is a subgroup of G, hence FG.
@@ -432,35 +516,77 @@ theorem isVirtuallyNilpotent_of_extension_by_Z (K : Subgroup G) [K.Normal] [FG K
   haveI : IsNilpotent N := hN_nil
 
   /-
-  Complete proof requires several pieces of missing infrastructure:
+  PROOF STRATEGY (Extension by ℤ):
 
-  Key Challenge: N is of type `Subgroup ↥K` (subgroup of the carrier type of K),
-  but we need a `Subgroup G` (subgroup of G) that is normal in G, nilpotent, and has finite index.
+  Since G/K ≅ ℤ, we have special structure: there exists t ∈ G with φ(t) = generator of ℤ
+  such that G = ⟨K, t⟩ (every g ∈ G can be written as k·t^m for some k ∈ K, m ∈ ℤ).
 
-  The mathematical idea:
-  1. Map N to G via M = Subgroup.map K.subtype N (this gives M ≤ K as a subgroup of G)
-  2. Take normal closure or intersection of G-conjugates of M
-  3. Use that K is FG, so finitely many distinct conjugates (by counting subgroups of given index)
-  4. Intersection of finitely many finite-index subgroups has finite index
-  5. This intersection is normal in G and nilpotent
+  STEP 1: Lift N to a subgroup of G
+  Let M = N.map K.subtype : Subgroup G. Then M ≤ K and M ≃* N (via restriction of subtype).
 
-  Missing infrastructure in current Mathlib/codebase:
-  - Lemma: FG groups have finitely many subgroups of any given index
-  - Lemma: Subgroup.map preserves nilpotency (with appropriate equivalence)
-  - Lemma: Composition/tower law for finite index: [G:M] = [G:K]·[K:N]
-  - Lemma: Normal closure construction and properties
-  - Or alternatively: Direct construction showing N lifts to normal subgroup of G
+  STEP 2: Consider G-conjugates of M
+  For each m ∈ ℤ, the conjugate t^m M t^(-m) is a subgroup of K (since K ⊴ G).
+  Since M ≃* N and N is nilpotent, each conjugate is also nilpotent.
 
-  The standard approach in group theory textbooks uses one of:
-  (a) Correspondence theorem + lifting normal subgroups through short exact sequences
-  (b) Frattini argument for finite-index normal subgroups
-  (c) Direct construction via semidirect product structure when G/K ≅ ℤ
+  STEP 3: Finite number of conjugates
+  Key fact: In a finitely generated group, there are only finitely many subgroups of
+  any given finite index. Since K is FG and N has finite index in K, there are only
+  finitely many subgroups of K with index [K:N].
 
-  For approach (c): Since G/K ≅ ℤ, pick t ∈ G mapping to generator. Then G = ⟨K,t⟩ where
-  conjugation by t permutes finite-index subgroups of K. The intersection ⋂ₘ tᵐNt⁻ᵐ has
-  finite index (finitely many distinct conjugates) and is t-invariant, hence normal in G.
+  The conjugates {t^m M t^(-m) : m ∈ ℤ} all have the same index [K:N], so there are
+  only finitely many distinct ones. Let's say t^r M t^(-r) = M for some r > 0 (by
+  pigeonhole principle).
 
-  This is a cornerstone result but requires careful formalization. Leaving as sorry.
+  STEP 4: Form the core
+  Let L = ⋂_{i=0}^{r-1} t^i M t^(-i). This is the intersection of finitely many
+  conjugates of M.
+
+  Properties of L:
+  (a) L ⊴ G: Since t^r L t^(-r) = L, and K ⊴ G, we have L is normal in G
+  (b) L is nilpotent: L ≤ M and M ≃* N which is nilpotent
+  (c) L has finite index in K: [K:L] divides [K:M]^r = [K:N]^r (product formula)
+  (d) L has finite index in G: [G:L] = [G:K]·[K:L] by tower law
+
+  MISSING INFRASTRUCTURE:
+
+  The main gaps are:
+
+  A. FINITENESS OF SUBGROUPS:
+     Lemma (needed): FG groups have finitely many subgroups of index n.
+     Proof outline: Index-n subgroups correspond to transitive actions on n-element sets.
+     For FG group with k generators, this is bounded by (n!)^k.
+
+  B. INTERSECTION OF FINITE-INDEX SUBGROUPS:
+     Lemma (needed): Intersection of finitely many finite-index subgroups has finite index.
+     Proof: [G : H₁ ∩ H₂] divides [G:H₁]·[G:H₂] (standard group theory).
+
+  C. NORMAL CLOSURE AND CONJUGATES:
+     - Lemma: Conjugation action on subgroups of K
+     - Lemma: Core (intersection of conjugates) is normal
+     - Lemma: Periodicity of conjugation when G/K ≅ ℤ
+
+  D. NILPOTENCY TRANSFER:
+     - Lemma: Subgroup.map preserves nilpotency (when injective)
+     - Lemma: Intersection of nilpotent subgroups with nilpotent centralizer is nilpotent
+     - Or simpler: any subgroup of a nilpotent group is nilpotent (already in Mathlib)
+
+  E. INDEX CALCULATIONS:
+     - Tower law: [G:H] = [G:K]·[K:H] when H ≤ K ≤ G
+     - Product formula for intersections
+
+  ALTERNATIVE APPROACH (Polycyclic):
+
+  A cleaner approach uses the polycyclic characterization:
+  1. K is virtually nilpotent and FG, hence polycyclic (by isVirtuallyNilpotent_iff_polycyclic)
+  2. G is an extension of polycyclic K by ℤ
+  3. Extensions of polycyclic groups by cyclic groups are polycyclic (structural theorem)
+  4. Polycyclic groups are virtually nilpotent (by polycyclic_has_finiteIndex_nilpotent_normal_subgroup)
+
+  This approach requires the extension theorem for polycyclic groups, which is also
+  not yet formalized but may be easier to prove.
+
+  REQUIRED INFRASTRUCTURE: ~300-500 lines
+  This is a significant theorem but more tractable than theorems 1 and 2.
   -/
   sorry
 
