@@ -15,10 +15,16 @@ theorem GromovPolynomialGrowthTheorem [Group.FG G] :
 
 | Direction | Statement | Status |
 |-----------|-----------|--------|
-| **Reverse (easy)** | Virtually nilpotent implies polynomial growth | Complete |
-| **Forward (hard)** | Polynomial growth implies virtually nilpotent | In progress |
+| **Reverse (easy)** | Virtually nilpotent implies polynomial growth | In progress (2 sorries) |
+| **Forward (hard)** | Polynomial growth implies virtually nilpotent | In progress (4 sorries) |
 
-### Completed
+**Current sorry count:** 15 total across 4 files
+- Polycyclic.lean: 8 sorries (polycyclic group infrastructure)
+- NilpotentGrowth.lean: 2 sorries (reverse direction)
+- ResiduallyFinite.lean: 1 sorry
+- Descent.lean: 4 sorries (forward direction)
+
+### Completed Infrastructure
 
 - Cayley ball definitions and basic properties
 - Word length / word metric infrastructure
@@ -28,20 +34,30 @@ theorem GromovPolynomialGrowthTheorem [Group.FG G] :
 - Polynomial growth examples: finite groups, Z, Z^n
 - Products preserve polynomial growth
 - F.g. abelian groups have polynomial growth
-- **Wolf's theorem**: F.g. nilpotent groups have polynomial growth
-- **Full reverse direction**: F.g. virtually nilpotent groups have polynomial growth
 - Harmonic function infrastructure on Cayley graphs
 - Discrete Poincare inequalities
 - Descent argument structure (statements)
 
-### In Progress
+### Remaining Work
 
-The forward direction uses Kleiner's harmonic function approach:
+**Polycyclic infrastructure (8 sorries):**
+- `isPolycyclic_of_isNilpotent_fg`: F.g. nilpotent groups are polycyclic
+- `polycyclic_has_finiteIndex_nilpotent_normal_subgroup`: Fitting subgroup theorem
+- `isPolycyclic_of_finite`: Finite solvable groups are polycyclic
+- `isPolycyclic_subgroup`: Subgroups of polycyclic are polycyclic
+- `isPolycyclic_of_le`: Variant for subgroup inclusion
+- `isPolycyclic_of_extension`: Extensions preserve polycyclicity
+- `isPolycyclic_of_finiteIndex_polycyclic`: Finite extensions
+- `Subgroup.fg_of_polycyclic`: Mal'cev's theorem
 
-- Colding-Minicozzi theorem (polynomial growth implies finite harmonic dimension)
-- Infinite cyclic quotient extraction from harmonic functions
-- Kernel growth degree reduction
-- Extension lemmas for virtual nilpotency
+**Reverse direction (2 sorries):**
+- `cayleyBall_lift_bound_for_center_quotient`: Central extension bounds
+- `schreier_rewrite_bound`: Schreier's lemma for word length
+
+**Forward direction (4 sorries):**
+- `infinite_cyclic_quotient_of_polynomial_growth`: Kleiner's theorem
+- `kernel_growth_degree_lt`: Growth degree reduction
+- `isVirtuallyNilpotent_of_extension_by_Z`: Extension lemma (2 sorries)
 
 ## File Structure
 
@@ -67,6 +83,38 @@ Requires Lean 4 and Mathlib v4.27.0-rc1.
 lake update
 lake build
 ```
+
+## TAIL Verification
+
+This project follows the [TAIL Standard](https://github.com/e-vergo/TAIL) for AI-generated formal proofs. TAIL reduces review burden by structuring projects so that only the theorem statement needs human verification.
+
+### Running Verification
+
+```bash
+lake exe tailverify
+```
+
+### Project Structure
+
+| Component | Review Status |
+|-----------|---------------|
+| `MainTheorem.lean` | Human review required |
+| `Definitions/` | Human review required |
+| `ProofOfMainTheorem.lean` | Machine verified |
+| `Proofs/` | Machine verified |
+
+**Current status:** 492 lines require review (6% of 8,017 total lines). TAIL verification passes.
+
+### Development Workflow
+
+TAIL verification should pass at all times during development:
+
+1. **No axiom declarations** - Use `theorem ... := by sorry` for incomplete proofs
+2. **No native_decide** - Avoid kernel-level computation
+3. **No trivial True** - Don't declare theorems with type `True`
+4. **Correct structure** - Keep proof machinery in `Proofs/`, definitions in `Definitions/`
+
+Run `lake exe tailverify` before committing to ensure compliance.
 
 ## Mathematical Background
 

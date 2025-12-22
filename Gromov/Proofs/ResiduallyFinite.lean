@@ -126,27 +126,31 @@ private theorem isResiduallyFinite_of_fg_commGroup (A : Type*) [CommGroup A] [FG
       rw [ZMod.intCast_zmod_eq_zero_iff_dvd] at hidx_cast
       exact hn_not_div hidx_cast
 
-/-- Finitely generated virtually nilpotent groups are residually finite.
+/-- The lower central series of a quotient is bounded by the image of the lower central series. -/
+private lemma lowerCentralSeries_quotient_le {H : Type*} [Group H] (N : Subgroup H) [N.Normal] (j : ℕ) :
+    lowerCentralSeries (H ⧸ N) j ≤ (lowerCentralSeries H j).map (QuotientGroup.mk' N) := by
+  induction j with
+  | zero =>
+    simp only [lowerCentralSeries_zero]
+    exact le_of_eq (Subgroup.map_top_of_surjective _ (QuotientGroup.mk'_surjective _)).symm
+  | succ j ihj =>
+    have htop_le : (⊤ : Subgroup (H ⧸ N)) ≤ (⊤ : Subgroup H).map (QuotientGroup.mk' N) := by
+      rw [Subgroup.map_top_of_surjective _ (QuotientGroup.mk'_surjective _)]
+    calc lowerCentralSeries (H ⧸ N) (j + 1)
+        = ⁅lowerCentralSeries (H ⧸ N) j, ⊤⁆ := rfl
+      _ ≤ Subgroup.map (QuotientGroup.mk' N) ⁅lowerCentralSeries H j, ⊤⁆ := by
+          exact Subgroup.commutator_le_map_commutator ihj htop_le
+      _ = (lowerCentralSeries H (j + 1)).map (QuotientGroup.mk' N) := rfl
 
-The proof proceeds in two steps:
-1. First prove that finitely generated nilpotent groups are residually finite.
-   This uses the fact that nilpotent groups have a central series, and abelian
-   groups are residually finite (they embed into products of cyclic groups).
+/-- Finitely generated nilpotent groups are residually finite.
 
-2. Then show that residual finiteness passes to finite-index overgroups.
-   If H has finite index in G and H is residually finite, then G is residually
-   finite because finite-index subgroups detect non-identity elements.
-
-Required lemmas not yet in Mathlib:
-- `IsResiduallyFinite.of_isNilpotent_fg` : F.g. nilpotent groups are residually finite
-- `IsResiduallyFinite.of_finiteIndex` : Residual finiteness lifts through finite-index extensions
-
-References:
-- Hall, P. "The Edmonton Notes on Nilpotent Groups" (1957)
-- Gruenberg, K. W. "Residual properties of infinite soluble groups" (1957)
+The proof proceeds by induction on the nilpotency class. For a nilpotent group H of class c and
+an element g ≠ 1:
+- If g ∉ center(H), we use that H/Z(H) has class c-1 and apply the IH
+- If g ∈ center(H) but g ∉ [H,H], we use that H/[H,H] is abelian and apply abelian residual finiteness
+- If g ∈ center(H) ∩ [H,H], we find the minimal k such that g ∉ lowerCentralSeries H k,
+  then the quotient H/lowerCentralSeries H k has smaller nilpotency class and the IH applies
 -/
--- Helper: Residual finiteness of f.g. nilpotent groups
--- This is proven by induction on the nilpotency class
 private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
     [hNil : IsNilpotent H] :
     IsResiduallyFinite H := by
@@ -182,45 +186,158 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
       let gbar := QuotientGroup.mk (s := commutator H) g
       by_cases hgcomm : g ∈ commutator H
       · -- g is in center H AND commutator H
-        -- Strategy: use that Z(H) is f.g. abelian, apply its residual finiteness,
-        -- then extend to a finite-index subgroup of H using the quotient H/Z(H)
+        -- Strategy: find minimal k with g ∉ lowerCentralSeries H k, then quotient by it
+        -- and apply the IH to the quotient (which has smaller nilpotency class)
         --
-        -- Since Z(H) is the center of a f.g. nilpotent group, Z(H) is f.g. abelian
-        -- (This follows from the fact that H/Z(H) is f.g., and we can lift generators)
-        -- Let's construct this more carefully using a standard result
-        --
-        -- We'll use the fact that we can work with the quotient H / Z₂(H)
-        -- where Z₂(H) = upperCentralSeries H 2
-        -- If g ∈ Z₂(H), we continue to Z₃(H), etc.
-        --
-        -- Actually, let's use a more direct approach:
-        -- Since g ∈ Z(H) and Z(H) is abelian, we can view Z(H) as a CommGroup
-        -- We need to show Z(H) is f.g. First observe that the quotient map
-        -- H → H/Z(H) is surjective, and H is f.g., so H/Z(H) is f.g. by QuotientGroup.fg
-        --
-        -- For the center Z(H) being f.g., we use that in a f.g. nilpotent group,
-        -- the center is f.g. This is a standard result but may need a proof or axiom.
-        -- For now, we'll assume this as it's a standard fact about nilpotent groups.
-        --
-        -- The complete proof requires showing that:
-        -- 1. Centers of f.g. nilpotent groups are f.g.
-        -- 2. Using residual finiteness of Z(H) to find M with g ∉ M
-        -- 3. Constructing a finite-index normal subgroup of H containing M
-        --
-        -- Since this requires infrastructure about centers of nilpotent groups
-        -- that may not be in Mathlib yet, we leave this as sorry with detailed plan.
-        --
-        -- ALTERNATIVE IMPLEMENTATION using lower central series:
-        -- Find minimal i with g ∈ lowerCentralSeries H i \ lowerCentralSeries H (i+1)
-        -- Then lowerCentralSeries H i / lowerCentralSeries H (i+1) is abelian
-        -- The image of g there is nonzero, use residual finiteness
-        -- Pull back to get required normal subgroup
-        --
-        -- This requires:
-        -- - nat.find or similar for minimal i
-        -- - Quotient group constructions for lower central series
-        -- - Facts about when quotients of consecutive terms are central/abelian
-        sorry
+        -- g ∈ lowerCentralSeries H 1 = commutator H
+        have hg_lcs1 : g ∈ lowerCentralSeries H 1 := by rw [lowerCentralSeries_one]; exact hgcomm
+        -- Since H is nilpotent, lowerCentralSeries H (nilpotencyClass H) = ⊥
+        have hnil_lcs : lowerCentralSeries H (nilpotencyClass H) = ⊥ := lowerCentralSeries_nilpotencyClass
+        have hg_not_bot : g ∉ (⊥ : Subgroup H) := by simp [hg]
+        have hg_not_lcs_class : g ∉ lowerCentralSeries H (nilpotencyClass H) := by
+          rw [hnil_lcs]; exact hg_not_bot
+        -- Find minimal k such that g ∉ lowerCentralSeries H k
+        have hP_exists : ∃ k, g ∉ lowerCentralSeries H k := ⟨nilpotencyClass H, hg_not_lcs_class⟩
+        classical
+        let k := Nat.find hP_exists
+        have hk_spec : g ∉ lowerCentralSeries H k := Nat.find_spec hP_exists
+        have hk_min : ∀ m < k, g ∈ lowerCentralSeries H m := fun m hm =>
+          not_not.mp (Nat.find_min hP_exists hm)
+        -- k ≥ 2 since g ∈ lowerCentralSeries H 1 = commutator H
+        have hk_ge_two : k ≥ 2 := by
+          by_contra hk_lt
+          push_neg at hk_lt
+          interval_cases k
+          · simp only [lowerCentralSeries_zero, mem_top, not_true_eq_false] at hk_spec
+          · rw [lowerCentralSeries_one] at hk_spec; exact hk_spec hgcomm
+        -- Work in the quotient Q = H / lowerCentralSeries H k
+        haveI : (lowerCentralSeries H k).Normal := lowerCentralSeries_normal k
+        let Q := H ⧸ lowerCentralSeries H k
+        haveI : FG Q := QuotientGroup.fg (lowerCentralSeries H k)
+        haveI : IsNilpotent Q := inferInstance
+        -- The image of g in Q is nontrivial
+        let g_Q := QuotientGroup.mk (s := lowerCentralSeries H k) g
+        have hg_Q_ne : g_Q ≠ 1 := by
+          intro h
+          apply hk_spec
+          rwa [QuotientGroup.eq_one_iff] at h
+        -- Q has nilpotency class ≤ k - 1
+        -- For j ≥ k, lowerCentralSeries H j ≤ lowerCentralSeries H k, so image is trivial
+        have hQ_nil_class : ∀ j, k ≤ j → lowerCentralSeries Q j = ⊥ := fun j hj => by
+          rw [eq_bot_iff]
+          intro x hx
+          have hmem := lowerCentralSeries_quotient_le (lowerCentralSeries H k) j hx
+          rw [Subgroup.mem_map] at hmem
+          obtain ⟨y, hy, hxy⟩ := hmem
+          rw [Subgroup.mem_bot, ← hxy, QuotientGroup.mk'_apply, QuotientGroup.eq_one_iff]
+          exact lowerCentralSeries_antitone hj hy
+        -- nilpotencyClass Q ≤ k
+        have hQ_class : nilpotencyClass Q ≤ k := by
+          rw [← lowerCentralSeries_eq_bot_iff_nilpotencyClass_le]
+          exact hQ_nil_class k le_rfl
+        -- upperCentralSeries Q n = ⊤ since nilpotencyClass Q ≤ k ≤ n
+        -- We need k ≤ n, which follows from k ≤ nilpotencyClass H ≤ n + 1
+        have hk_le_class : k ≤ nilpotencyClass H := by
+          by_contra hk_gt
+          push_neg at hk_gt
+          -- nilpotencyClass H < k, so g ∈ lowerCentralSeries H (nilpotencyClass H) = ⊥
+          have hg_in := hk_min (nilpotencyClass H) hk_gt
+          rw [lowerCentralSeries_nilpotencyClass, Subgroup.mem_bot] at hg_in
+          exact hg hg_in
+        have hclass_le_n1 : nilpotencyClass H ≤ n + 1 :=
+          upperCentralSeries_eq_top_iff_nilpotencyClass_le.mp hn
+        -- Case split: k < nilpotencyClass H (quotient approach works) vs k = nilpotencyClass H
+        by_cases hk_lt_class : k < nilpotencyClass H
+        · -- Case: k < nilpotencyClass H, so quotient reduces nilpotency class
+          have hQ_upper : upperCentralSeries Q n = ⊤ := by
+            have hclass_le : nilpotencyClass Q ≤ n := by
+              -- nilpotencyClass Q ≤ k < nilpotencyClass H ≤ n + 1, so k ≤ n
+              omega
+            exact upperCentralSeries_eq_top_iff_nilpotencyClass_le.mpr hclass_le
+          -- Apply IH to Q
+          have hQ_resid : IsResiduallyFinite Q := ih Q hQ_upper
+          -- Get finite-index normal subgroup of Q not containing g_Q
+          obtain ⟨M_Q, hM_Q_norm, hM_Q_fin, hg_Q_not_in_M_Q⟩ := hQ_resid g_Q hg_Q_ne
+          -- Pull back to H
+          let M_H := M_Q.comap (QuotientGroup.mk' (lowerCentralSeries H k))
+          use M_H
+          constructor
+          · exact Subgroup.Normal.comap hM_Q_norm _
+          constructor
+          · haveI : M_Q.FiniteIndex := hM_Q_fin
+            have hindx := Subgroup.index_comap_of_surjective M_Q
+              (QuotientGroup.mk'_surjective (lowerCentralSeries H k))
+            exact ⟨by rw [hindx]; exact hM_Q_fin.index_ne_zero⟩
+          · intro hg_in; exact hg_Q_not_in_M_Q hg_in
+        · -- Case: k = nilpotencyClass H (quotient is trivial, need different approach)
+          -- In this case, g ∈ lcs H (k-1) by minimality of k, and k = nilpotencyClass H.
+          -- lcs H (k-1) is abelian since [lcs(k-1), H] = lcs k = lcs (nilpotencyClass H) = ⊥.
+          -- We use polycyclic residual finiteness directly.
+          push_neg at hk_lt_class
+          have hk_eq_class : k = nilpotencyClass H := le_antisymm hk_le_class hk_lt_class
+          -- H is polycyclic (f.g. nilpotent => polycyclic)
+          haveI hH_poly : IsPolycyclic H := isPolycyclic_of_isNilpotent_fg H
+          -- Polycyclic groups are residually finite (this is the key fact)
+          -- We use that polycyclic groups have a polycyclic series with cyclic quotients,
+          -- and iterate the abelian case.
+          -- For now, we use that g ∈ center H and center H ∩ [H,H] is a f.g. abelian group.
+          -- The key observation: lcs H (k-1) ≤ center H (since [lcs(k-1), H] = lcs k = ⊥)
+          -- and g ∈ lcs H (k-1), so g is in a f.g. abelian subgroup (lcs H (k-1)).
+          -- Apply abelian residual finiteness to lcs H (k-1).
+          let L := lowerCentralSeries H (k - 1)
+          have hg_in_L : g ∈ L := hk_min (k - 1) (by omega)
+          -- L is f.g. since H is polycyclic
+          haveI hL_fg : FG L := Subgroup.fg_of_polycyclic hH_poly L
+          -- L ≤ center H, so L is abelian
+          have hL_le_center : L ≤ center H := by
+            intro x hx
+            rw [Subgroup.mem_center_iff]
+            intro y
+            -- [x, y] ∈ lcs H k since x ∈ lcs H (k-1) and k-1+1 = k
+            have hxy : ⁅x, y⁆ ∈ lowerCentralSeries H k := by
+              have hsub : k - 1 + 1 = k := Nat.sub_add_cancel (by omega : 1 ≤ k)
+              rw [← hsub, lowerCentralSeries_succ]
+              apply Subgroup.subset_closure
+              exact ⟨x, hx, y, Subgroup.mem_top y, rfl⟩
+            rw [hk_eq_class, lowerCentralSeries_nilpotencyClass, Subgroup.mem_bot] at hxy
+            rw [commutatorElement_def] at hxy
+            calc y * x = 1 * (y * x) := by group
+              _ = (x * y * x⁻¹ * y⁻¹) * (y * x) := by rw [hxy]
+              _ = x * y := by group
+          -- L has CommGroup structure since L ≤ center H
+          haveI : CommGroup L := CommGroup.mk (fun a b => by
+            ext; simp only [Subgroup.coe_mul]
+            have ha : (a : H) ∈ center H := hL_le_center a.2
+            rw [Subgroup.mem_center_iff] at ha
+            exact (ha b).symm)
+          have hL_resid : IsResiduallyFinite L :=
+            sorry
+          have hg_L_ne : (⟨g, hg_in_L⟩ : L) ≠ 1 := by
+            intro h; apply hg; simp only [Subgroup.mk_eq_one] at h; exact h
+          obtain ⟨M', hM'Norm, hM'Fin, hg_not_in_M'⟩ := hL_resid ⟨g, hg_in_L⟩ hg_L_ne
+          -- M'.map L.subtype ≤ center H, so it's normal in H
+          let M := (M'.map L.subtype).normalCore
+          use M
+          constructor
+          · exact Subgroup.normalCore_normal _
+          constructor
+          · -- Need [H : M] < ∞
+            -- [H : M] ≤ [H : M'.map L.subtype]
+            -- [H : M'.map L.subtype] = [L : M'] * [H : L] by index_map_subtype
+            -- [L : M'] is finite, but [H : L] might be infinite!
+            -- This is the issue: L = lcs H (k-1) might have infinite index in H.
+            -- TODO: Need a different approach here.
+            sorry
+          · intro hgM
+            apply hg_not_in_M'
+            have hgM' : g ∈ M'.map L.subtype :=
+              Subgroup.normalCore_le (M'.map L.subtype) hgM
+            rw [Subgroup.mem_map] at hgM'
+            obtain ⟨y, hy, hgy⟩ := hgM'
+            simp only [Subgroup.coe_subtype] at hgy
+            have : y = ⟨g, hg_in_L⟩ := by ext; exact hgy
+            rw [this] at hy
+            exact hy
       · -- g is not in the commutator subgroup, so gbar ≠ 1 in H^ab
         have hgbar_ne : gbar ≠ 1 := by
           intro h
@@ -254,8 +371,8 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
           -- so it inherits FG from H being FG (any quotient of f.g. group is f.g.)
           -- But this requires the FG instance to work with the Abelianization type
           --
-          -- Workaround: use an axiom or sorry for now, as this is a standard fact
-          sorry
+          -- Abelianization H = H ⧸ commutator H, and QuotientGroup.fg gives us FG
+          exact QuotientGroup.fg (commutator H)
         -- Abelianization H is a f.g. CommGroup, so it's residually finite
         have hAb_resid : IsResiduallyFinite (Abelianization H) :=
           isResiduallyFinite_of_fg_commGroup (Abelianization H)
@@ -335,85 +452,82 @@ theorem residuallyFinite_of_fg_virtuallyNilpotent [FG G] (hG : IsVirtuallyNilpot
   -- Case 1: g is not in N
   by_cases hgN : g ∈ N
   · -- Case 2: g is in N, use residual finiteness of N
-    -- N is f.g. nilpotent, so N is residually finite
-    haveI : N.FiniteIndex := hFin
-    -- N is f.g. by Schreier's lemma (automatic instance)
-    -- First, ⟨g, hgN⟩ ≠ 1 in N
-    have hg1 : (⟨g, hgN⟩ : N) ≠ 1 := by
+    -- N is f.g. nilpotent, so it's residually finite
+    haveI : FG N := Subgroup.fg_of_index_ne_zero N
+    haveI : IsNilpotent N := hNil
+    have hN_resid : IsResiduallyFinite N := isResiduallyFinite_of_fg_nilpotent N
+    -- Get a finite-index normal subgroup M' of N not containing g
+    have hg_ne_one_in_N : (⟨g, hgN⟩ : N) ≠ 1 := by
       intro h
       apply hg
       simp only [Subgroup.mk_eq_one] at h
       exact h
-    -- N is residually finite (f.g. nilpotent groups are residually finite)
-    have hNResid : IsResiduallyFinite N := isResiduallyFinite_of_fg_nilpotent N
-    -- Get a finite-index normal subgroup of N not containing g
-    obtain ⟨M, hMNorm, hMFin, hgNotInM⟩ := hNResid ⟨g, hgN⟩ hg1
-    -- Need to lift M to a finite-index normal subgroup of G
-    -- M is a subgroup of N, which is a subgroup of G
-    -- Map M via N.subtype to get a subgroup of G, then take normal core
-    let M' := M.map N.subtype
-    -- M' has finite index in N (same as M has in N)
-    have hM'Fin : M'.FiniteIndex := by
-      -- M' is isomorphic to M via subtype (injective), so has same index
-      haveI : M.FiniteIndex := hMFin
-      -- M' = M.map N.subtype, and M'.index in G relates to M.index in N
-      -- Actually, let's use a different approach: take the inf with N
-      -- The index of M' = M in N, and N has finite index in G
-      -- Actually we need normalCore anyway, so let's use that
-      -- The normal core of M' has finite index
-      constructor
-      -- M' ≤ N, so M'.index ≤ N.index * [N : M']
-      -- We use that M'.subgroupOf N = M (up to iso)
-      have hle : M' ≤ N := Subgroup.map_subtype_le M
-      -- [G : M'] = [G : N] * [N : M'] (when both finite)
-      -- [N : M'] = [N : M] since M' ≅ M
-      have hindx : M'.index = N.index * M.index := by
-        rw [← Subgroup.relIndex_top_right, ← Subgroup.relIndex_top_right]
-        have h1 : M'.relIndex N = M.index := by
-          -- M'.subgroupOf N is isomorphic to M
-          rw [Subgroup.relIndex]
-          -- M'.subgroupOf N = {x ∈ N | x ∈ M'} = M (as subgroup of N)
-          congr 1
-          ext ⟨x, hx⟩
-          simp only [Subgroup.mem_subgroupOf]
-          -- Goal: x ∈ M' ↔ ⟨x, hx⟩ ∈ M
-          rw [Subgroup.mem_map]
-          constructor
-          · intro ⟨y, hyM, hyeq⟩
-            simp only [Subgroup.coe_subtype] at hyeq
-            have : y = ⟨x, hx⟩ := by ext; exact hyeq
-            rw [← this]; exact hyM
-          · intro hxM
-            exact ⟨⟨x, hx⟩, hxM, rfl⟩
-        rw [← h1]
-        rw [Nat.mul_comm]
-        exact (Subgroup.relIndex_mul_relIndex M' N ⊤ hle le_top).symm
-      rw [hindx]
-      exact Nat.mul_ne_zero hFin.index_ne_zero hMFin.index_ne_zero
-    -- Take the normal core of M'
-    use M'.normalCore
+    obtain ⟨M', hM'Norm, hM'Fin, hg_not_in_M'⟩ := hN_resid ⟨g, hgN⟩ hg_ne_one_in_N
+    -- M' is a subgroup of N. We need a normal subgroup of G.
+    -- Take the intersection of conjugates of M' (normalCore in G)
+    -- Actually, M' is normal in N, but not necessarily in G.
+    -- We use the fact that N is normal in G to construct a normal subgroup of G.
+    --
+    -- The subgroup M'.map N.subtype is a subgroup of G.
+    -- Its normal core in G is normal and has finite index (since N has finite index).
+    let M := (M'.map N.subtype).normalCore
+    use M
     constructor
-    · -- normalCore is normal
-      exact Subgroup.normalCore_normal M'
+    · -- M is normal in G (normalCore is always normal)
+      exact Subgroup.normalCore_normal _
     constructor
-    · -- normalCore has finite index
-      haveI : M'.FiniteIndex := hM'Fin
-      exact Subgroup.finiteIndex_normalCore M'
-    · -- g ∉ M'.normalCore
-      intro hgCore
-      -- normalCore M' ≤ M', so g ∈ M'
-      have hgM' : g ∈ M' := Subgroup.normalCore_le M' hgCore
-      -- g ∈ M' means ⟨g, hgN⟩ ∈ M
-      apply hgNotInM
+    · -- M has finite index in G
+      -- [G : M] ≤ [G : M'.map N.subtype] * (some factorial bound)
+      -- Actually, we use that M'.map N.subtype has finite index in N,
+      -- and N has finite index in G, so M'.map N.subtype has finite index in G.
+      --
+      -- First, [G : N] is finite by hFin.
+      -- [N : M'] is finite by hM'Fin.
+      -- M'.map N.subtype is the image of M' in G.
+      -- [G : M'.map N.subtype] = [G : N] * [N : M'] / |M' ∩ ker N.subtype|
+      -- But N.subtype is injective, so ker = ⊥, so |M' ∩ ker| = 1.
+      -- So [G : M'.map N.subtype] = [G : N] * [N : M'].
+      --
+      -- Actually, the subtype is injective, so M'.map N.subtype ≅ M'.
+      -- [G : M'.map N.subtype] = [G : N] * [N : M'] (by tower law in some sense).
+      --
+      -- Let me use a different approach: normalCore has finite index iff the original has finite index.
+      haveI : (M'.map N.subtype).FiniteIndex := by
+        haveI : N.FiniteIndex := hFin
+        haveI : M'.FiniteIndex := hM'Fin
+        have hN_fin : N.index ≠ 0 := hFin.index_ne_zero
+        have hM'_fin : M'.index ≠ 0 := hM'Fin.index_ne_zero
+        -- index_map_subtype: (M'.map N.subtype).index = M'.index * N.index
+        constructor
+        rw [Subgroup.index_map_subtype]
+        exact mul_ne_zero hM'_fin hN_fin
+      exact Subgroup.finiteIndex_normalCore (M'.map N.subtype)
+    · -- g ∉ M
+      intro hgM
+      apply hg_not_in_M'
+      -- g ∈ M = (M'.map N.subtype).normalCore ≤ M'.map N.subtype
+      have hgM' : g ∈ M'.map N.subtype := Subgroup.normalCore_le (M'.map N.subtype) hgM
       rw [Subgroup.mem_map] at hgM'
-      obtain ⟨⟨x, hxN⟩, hxM, hxeq⟩ := hgM'
-      simp only [Subgroup.coe_subtype] at hxeq
-      -- hxeq : x = g, and hxM : ⟨x, hxN⟩ ∈ M
-      subst hxeq
-      -- Now hxN and hgN are both proofs that g ∈ N
-      -- We need to show ⟨g, hgN⟩ ∈ M, but we have ⟨g, hxN⟩ ∈ M
-      convert hxM
-  · -- g ∉ N, so N itself is a normal finite-index subgroup not containing g
+      obtain ⟨y, hy, hgy⟩ := hgM'
+      -- y ∈ M' and N.subtype y = g
+      -- N.subtype y = y.1 = g
+      simp only [Subgroup.coe_subtype] at hgy
+      -- So y.1 = g. Since hgN : g ∈ N, we have y = ⟨g, hgN⟩
+      have : y = ⟨g, hgN⟩ := by
+        ext
+        exact hgy
+      rw [this] at hy
+      exact hy
+  · -- g ∉ N, so the image of g in G/N is nontrivial
+    -- G/N is finite, so there's a finite-index normal subgroup not containing g
+    let gbar := QuotientGroup.mk (s := N) g
+    have hgbar_ne : gbar ≠ 1 := by
+      intro h
+      apply hgN
+      rwa [QuotientGroup.eq_one_iff] at h
+    -- G/N is finite
+    haveI : Finite (G ⧸ N) := Subgroup.finite_quotient_of_finiteIndex
+    -- N already has finite index and g ∉ N, so use N directly
     exact ⟨N, hNorm, hFin, hgN⟩
 
 end
