@@ -127,7 +127,8 @@ private theorem isResiduallyFinite_of_fg_commGroup (A : Type*) [CommGroup A] [FG
       exact hn_not_div hidx_cast
 
 /-- The lower central series of a quotient is bounded by the image of the lower central series. -/
-private lemma lowerCentralSeries_quotient_le {H : Type*} [Group H] (N : Subgroup H) [N.Normal] (j : ℕ) :
+private lemma lowerCentralSeries_quotient_le {H : Type*} [Group H] (N : Subgroup H)
+    [N.Normal] (j : ℕ) :
     lowerCentralSeries (H ⧸ N) j ≤ (lowerCentralSeries H j).map (QuotientGroup.mk' N) := by
   induction j with
   | zero =>
@@ -147,7 +148,8 @@ private lemma lowerCentralSeries_quotient_le {H : Type*} [Group H] (N : Subgroup
 The proof proceeds by induction on the nilpotency class. For a nilpotent group H of class c and
 an element g ≠ 1:
 - If g ∉ center(H), we use that H/Z(H) has class c-1 and apply the IH
-- If g ∈ center(H) but g ∉ [H,H], we use that H/[H,H] is abelian and apply abelian residual finiteness
+- If g ∈ center(H) but g ∉ [H,H], we use that H/[H,H] is abelian and apply abelian
++  residual finiteness
 - If g ∈ center(H) ∩ [H,H], we find the minimal k such that g ∉ lowerCentralSeries H k,
   then the quotient H/lowerCentralSeries H k has smaller nilpotency class and the IH applies
 -/
@@ -192,7 +194,8 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
         -- g ∈ lowerCentralSeries H 1 = commutator H
         have hg_lcs1 : g ∈ lowerCentralSeries H 1 := by rw [lowerCentralSeries_one]; exact hgcomm
         -- Since H is nilpotent, lowerCentralSeries H (nilpotencyClass H) = ⊥
-        have hnil_lcs : lowerCentralSeries H (nilpotencyClass H) = ⊥ := lowerCentralSeries_nilpotencyClass
+        have hnil_lcs : lowerCentralSeries H (nilpotencyClass H) = ⊥ :=
+          lowerCentralSeries_nilpotencyClass
         have hg_not_bot : g ∉ (⊥ : Subgroup H) := by simp [hg]
         have hg_not_lcs_class : g ∉ lowerCentralSeries H (nilpotencyClass H) := by
           rw [hnil_lcs]; exact hg_not_bot
@@ -315,25 +318,114 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
           have hg_L_ne : (⟨g, hg_in_L⟩ : L) ≠ 1 := by
             intro h; apply hg; simp only [Subgroup.mk_eq_one] at h; exact h
           obtain ⟨M', hM'Norm, hM'Fin, hg_not_in_M'⟩ := hL_resid ⟨g, hg_in_L⟩ hg_L_ne
-          -- M'.map L.subtype ≤ center H, so it's normal in H
-          let M := (M'.map L.subtype).normalCore
+          -- M'.map L.subtype ≤ center H, so it's already normal in H
+          -- Use M'.map L.subtype directly (it's already normal, no need for normalCore)
+          have hM'_le_center : M'.map L.subtype ≤ center H := fun x hx => by
+            obtain ⟨y, _, hxy⟩ := Subgroup.mem_map.mp hx
+            rw [← hxy, Subgroup.coe_subtype]; exact hL_le_center y.2
+          haveI hM'_normal : (M'.map L.subtype).Normal := by
+            constructor; intro m' hm' h
+            have hm'_center := hM'_le_center hm'
+            rw [Subgroup.mem_center_iff] at hm'_center
+            have : h * m' * h⁻¹ = m' := by rw [hm'_center]; group
+            rw [this]; exact hm'
+          -- Key insight: Since L ≤ center H and M' ≤ L with [L : M'] finite,
+          -- and M'.map L.subtype is normal in H, we can use a congruence subgroup approach.
+          -- For f.g. nilpotent groups, we use the fact that the intersection of
+          -- finite-index normal subgroups separates points from 1.
+          --
+          -- Alternative construction: Use the quotient H → H/[H,H] × (L/M')
+          -- where the projection to L/M' detects g.
+          -- However, this requires finite-index in H.
+          --
+          -- The correct approach: Use that M'.map L.subtype has finite index in L (as image)
+          -- and construct a finite quotient of H that detects g.
+          -- Since L ≤ center H, the quotient H/M'.map L.subtype is a central extension
+          -- of H/L by L/M', and we need to find a finite quotient.
+          --
+          -- For now, we use that in THIS SPECIFIC CASE (k = nilpotencyClass H),
+          -- we have L = lcs(k-1) and [L, H] = lcs(k) = ⊥.
+          -- So L is central and the extension H → H/L splits (approximately).
+          -- We need [H : L] to be finite for the normalCore to have finite index.
+          --
+          -- Actually, for f.g. nilpotent groups, the LCS quotients are f.g. abelian,
+          -- so lcs(i)/lcs(i+1) is finite iff it's torsion.
+          -- For non-torsion case, [H : lcs(k-1)] is infinite.
+          --
+          -- THE FIX: Don't use M'.map L.subtype. Instead, directly construct a
+          -- homomorphism from H to a finite group that doesn't kill g.
+          --
+          -- Since g ∈ L = lcs(k-1) ≤ center H and L is f.g. abelian,
+          -- write L ≅ ℤ^r × T (finite T). If g has nontrivial component in T,
+          -- project to T. If g has nontrivial component in ℤ^r, pick m > |g_i|
+          -- and project to ℤ/mℤ.
+          -- Then compose with the quotient map H → H/ker to get a map to a finite group.
+          --
+          -- The kernel of this composition is what we want, but ensuring it has
+          -- finite index requires that the map extends from L to H in a way that
+          -- keeps finite cosets.
+          --
+          -- SIMPLEST APPROACH: Directly use that M'.map L.subtype has normalCore
+          -- that might not have finite index, but we can use a different subgroup.
+          --
+          -- OBSERVATION: The proof uses IH on nilpotency class. In this edge case,
+          -- we're at nilpotencyClass H = k ≤ n+1. If k ≤ n, we could use IH.
+          -- The issue is when k = n+1.
+          --
+          -- Actually, we have hclass_le_n1 : nilpotencyClass H ≤ n + 1.
+          -- If nilpotencyClass H < n + 1, then k = nilpotencyClass H ≤ n,
+          -- and we'd be in the other branch (hk_lt_class).
+          -- So we're in the case nilpotencyClass H = n + 1 = k.
+          --
+          -- In this case, we can use STRONG INDUCTION on the Hirsch length
+          -- (sum of ranks of abelian quotients in polycyclic series).
+          -- But this requires restructuring the whole proof.
+          --
+          -- For now, we accept that this case needs the result about
+          -- residual finiteness of polycyclic groups (which is what we're trying to prove!).
+          -- This indicates a CIRCULAR DEPENDENCY in the current proof approach.
+          --
+          -- The correct fix: The base case n=0 already handles trivial groups.
+          -- For n+1, we should ensure that either:
+          -- 1. g ∉ center (use IH on H/center)
+          -- 2. g ∈ center but g ∉ [H,H] (use abelian quotient)
+          -- 3. g ∈ center ∩ [H,H], but k < nilpotencyClass H (use IH on quotient)
+          -- 4. g ∈ center ∩ [H,H] and k = nilpotencyClass H
+          --
+          -- In case 4, we have g ∈ lcs(k-1), g ∉ lcs(k) = ⊥, so g is at the
+          -- "bottom" of the filtration. The key is that lcs(k-1) is a DIRECT SUMMAND
+          -- of the derived series in some sense (by the structure of nilpotent groups).
+          --
+          -- For f.g. nilpotent groups, there's a "congruence subgroup" construction:
+          -- For any m, let Γ_m be generated by m-th powers and m-fold commutators.
+          -- Then H/Γ_m is finite, and ∩ Γ_m = {1}.
+          -- For large enough m, g ∉ Γ_m.
+          --
+          -- This is the classical proof, but formalizing Γ_m is non-trivial.
+          -- For now, we leave this as sorry and note the approach.
+          let M := M'.map L.subtype
           use M
           constructor
-          · exact Subgroup.normalCore_normal _
+          · exact hM'_normal
           constructor
-          · -- Need [H : M] < ∞
-            -- [H : M] ≤ [H : M'.map L.subtype]
-            -- [H : M'.map L.subtype] = [L : M'] * [H : L] by index_map_subtype
-            -- [L : M'] is finite, but [H : L] might be infinite!
-            -- This is the issue: L = lcs H (k-1) might have infinite index in H.
-            -- TODO: Need a different approach here.
+          · -- This is the problematic step: [H : M] might be infinite
+            -- because [H : L] might be infinite (L = lcs(k-1) can have infinite index).
+            -- Example: Heisenberg group H₃(ℤ) has center of infinite index.
+            --
+            -- The standard proof uses "congruence subgroups": for any integer m > 0,
+            -- the subgroup Γ_m generated by m-th powers has finite index in H,
+            -- and for large enough m, g ∉ Γ_m. This is not yet formalized.
+            --
+            -- Alternative: Use strong induction on Hirsch length instead of
+            -- nilpotency class. When we reach this case, we can find a proper
+            -- quotient with smaller Hirsch length and apply the IH.
+            --
+            -- For now, this requires additional machinery not available in Mathlib.
             sorry
           · intro hgM
             apply hg_not_in_M'
-            have hgM' : g ∈ M'.map L.subtype :=
-              Subgroup.normalCore_le (M'.map L.subtype) hgM
-            rw [Subgroup.mem_map] at hgM'
-            obtain ⟨y, hy, hgy⟩ := hgM'
+            rw [Subgroup.mem_map] at hgM
+            obtain ⟨y, hy, hgy⟩ := hgM
             simp only [Subgroup.coe_subtype] at hgy
             have : y = ⟨g, hg_in_L⟩ := by ext; exact hgy
             rw [this] at hy
@@ -489,9 +581,10 @@ theorem residuallyFinite_of_fg_virtuallyNilpotent [FG G] (hG : IsVirtuallyNilpot
       -- So [G : M'.map N.subtype] = [G : N] * [N : M'].
       --
       -- Actually, the subtype is injective, so M'.map N.subtype ≅ M'.
-      -- [G : M'.map N.subtype] = [G : N] * [N : M'] (by tower law in some sense).
+      -- [G : M'.map N.subtype] = [G : N] * [N : M'] (by tower law in some sense)
       --
-      -- Let me use a different approach: normalCore has finite index iff the original has finite index.
+      -- Let me use a different approach: normalCore has finite index iff the original
+      -- has finite index.
       haveI : (M'.map N.subtype).FiniteIndex := by
         haveI : N.FiniteIndex := hFin
         haveI : M'.FiniteIndex := hM'Fin

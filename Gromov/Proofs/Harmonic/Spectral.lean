@@ -1,31 +1,3 @@
-/-
-Copyright 2025 The Gromov Project Authors.
-SPDX-License-Identifier: Apache-2.0
-
-Discrete Laplacian and spectral theory on Cayley graphs.
-
-This file develops the spectral theory of the discrete Laplacian operator on groups,
-which is fundamental to the harmonic function approach to Gromov's theorem.
-
-## Main Definitions
-
-* `DiscreteLaplacian`: The discrete Laplacian operator on functions G -> R
-
-## Main Results
-
-* `discreteLaplacian_eq`: Explicit formula for the Laplacian
-* `discreteLaplacian_selfAdjoint`: Self-adjointness on l^2(G)
-* `spectrum_nonneg`: Spectrum is non-negative
-* `spectrum_in_interval`: Spectrum lies in [0, 2]
-* `harmonic_iff_kernel`: Harmonic functions are exactly the kernel of Laplacian
-* `polynomial_growth_spectrum_zero`: For polynomial growth, 0 is in closure of spectrum
-
-## References
-
-* Tao-Shalom, Section 2
-* Woess, "Random Walks on Infinite Graphs and Groups"
--/
-
 module
 
 public import Gromov.Proofs.Harmonic.Core
@@ -34,8 +6,6 @@ public import Mathlib.Analysis.InnerProductSpace.Spectrum
 public import Mathlib.Analysis.InnerProductSpace.l2Space
 public import Mathlib.Analysis.Normed.Operator.LinearIsometry
 public import Mathlib.Topology.Algebra.Module.FiniteDimension
-
-set_option linter.style.longLine false
 
 namespace Gromov.Harmonic.Spectral
 
@@ -74,40 +44,71 @@ noncomputable def discreteLaplacianAt (f : G → ℝ) (x : G) : ℝ :=
 noncomputable def AveragingOperator : (G → ℝ) →ₗ[ℝ] (G → ℝ) where
   toFun := fun f x => averagingAt S f x
   map_add' := fun f g => by
-    -- Proof: averaging is linear (sum is linear, scalar mult is linear)
-    sorry
+    ext x
+    simp only [averagingAt, Pi.add_apply]
+    rw [Finset.sum_add_distrib]
+    ring
   map_smul' := fun c f => by
-    -- Proof: averaging commutes with scalar multiplication
-    sorry
+    ext x
+    simp only [averagingAt, Pi.smul_apply, smul_eq_mul, RingHom.id_apply]
+    rw [Finset.mul_sum]
+    ring_nf
+    rw [Finset.mul_sum]
 
 /-- The discrete Laplacian: identity minus averaging.
     (Delta f)(x) = f(x) - (1/|S|) * sum_{s in S} f(x * s) -/
 noncomputable def DiscreteLaplacian : (G → ℝ) →ₗ[ℝ] (G → ℝ) where
   toFun := fun f x => discreteLaplacianAt S f x
   map_add' := fun f g => by
-    -- Proof: Laplacian is linear (identity minus averaging)
-    sorry
+    ext x
+    simp only [discreteLaplacianAt, averagingAt, Pi.add_apply]
+    rw [Finset.sum_add_distrib]
+    ring
   map_smul' := fun c f => by
-    -- Proof: Laplacian commutes with scalar multiplication
-    sorry
+    ext x
+    simp only [discreteLaplacianAt, averagingAt, Pi.smul_apply, smul_eq_mul, RingHom.id_apply]
+    rw [← Finset.mul_sum]
+    ring
 
+omit [DecidableEq G] in
 /-- Explicit formula for the discrete Laplacian. -/
 theorem discreteLaplacian_eq (f : G → ℝ) (x : G) :
     DiscreteLaplacian S f x = f x - (1 / Fintype.card S) * ∑ s : S, f (x * s.val) := by
   rfl
 
+omit [DecidableEq G] in
 /-- The Laplacian of a constant function is zero. -/
 theorem discreteLaplacian_const (hS_nonempty : S.Nonempty) (c : ℝ) :
     DiscreteLaplacian S (fun _ => c) = 0 := by
-  -- Proof sketch: (c - c) = 0 since the average of constants is the constant.
-  sorry
+  ext x
+  simp only [discreteLaplacian_eq, Pi.zero_apply]
+  have hcard : (Fintype.card S : ℝ) ≠ 0 := by
+    have hpos : 0 < Fintype.card S := Fintype.card_pos_iff.mpr ⟨⟨_, hS_nonempty.some_mem⟩⟩
+    exact Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hpos)
+  simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+  field_simp
+  ring
 
+omit [DecidableEq G] in
 /-- The Laplacian is zero iff the function is harmonic (averaging property). -/
 theorem laplacian_eq_zero_iff_harmonic (hS_nonempty : S.Nonempty) (f : G → ℝ) :
     DiscreteLaplacian S f = 0 ↔ IsHarmonicSymmetric S f := by
-  -- Proof sketch: Delta f = 0 means f(x) = average of f over neighbors,
-  -- which is exactly the harmonic condition.
-  sorry
+  have hcard_pos : 0 < Fintype.card S := Fintype.card_pos_iff.mpr ⟨⟨_, hS_nonempty.some_mem⟩⟩
+  have hcard_ne : (Fintype.card S : ℝ) ≠ 0 :=
+    Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hcard_pos)
+  constructor
+  · intro hzero g
+    have h := congr_fun hzero g
+    simp only [discreteLaplacian_eq, Pi.zero_apply] at h
+    have hsub : f g = 1 / ↑(Fintype.card S) * ∑ s : S, f (g * s.val) := by linarith
+    field_simp at hsub
+    linarith
+  · intro hharm
+    ext x
+    simp only [discreteLaplacian_eq, Pi.zero_apply]
+    have h := hharm x
+    field_simp
+    linarith
 
 end Laplacian
 
@@ -121,19 +122,38 @@ section L2Theory
 
 variable (S : Set G) [Fintype S]
 
-/-- The discrete Laplacian is symmetric with respect to the l^2 inner product.
-    <Delta f, g> = <f, Delta g> for all f, g in l^2(G).
-    This is stated in terms of finite sums for compactly supported functions. -/
+omit [DecidableEq G] in
 theorem discreteLaplacian_selfAdjoint (hS : Gromov.IsSymmetric S)
     (f g : G → ℝ) (support : Finset G)
     (hf : ∀ x, x ∉ support → f x = 0) (hg : ∀ x, x ∉ support → g x = 0) :
     ∑ x ∈ support, (DiscreteLaplacian S f x) * g x =
     ∑ x ∈ support, f x * (DiscreteLaplacian S g x) := by
-  -- Proof sketch: Use symmetry of S. The key step is that
-  -- sum_x sum_{s in S} f(x*s) g(x) = sum_x sum_{s in S} f(x) g(x*s^{-1})
-  -- and s^{-1} in S by symmetry.
+  -- Expand the Laplacian: Delta f = f - Af where A is averaging
+  simp only [discreteLaplacian_eq]
+  -- Both sides expand to: sum f*g - (1/|S|) * (cross term)
+  -- We need to show the cross terms are equal:
+  -- sum_x (sum_s f(x*s)) * g(x) = sum_x f(x) * (sum_s g(x*s))
+  -- Rewrite as: sum_x sum_s f(x*s) * g(x) = sum_x sum_s f(x) * g(x*s)
+  -- By substitution y = x*s and symmetry of S (s^{-1} ∈ S), these are equal
+  have h1 : ∀ x ∈ support, (f x - 1 / ↑(Fintype.card S) * ∑ s : S, f (x * s.val)) * g x =
+            f x * g x - 1 / ↑(Fintype.card S) * (∑ s : S, f (x * s.val)) * g x := by
+    intros; ring
+  have h2 : ∀ x ∈ support, f x * (g x - 1 / ↑(Fintype.card S) * ∑ s : S, g (x * s.val)) =
+            f x * g x - f x * (1 / ↑(Fintype.card S) * ∑ s : S, g (x * s.val)) := by
+    intros; ring
+  rw [Finset.sum_congr rfl h1, Finset.sum_congr rfl h2]
+  simp only [Finset.sum_sub_distrib]
+  congr 1
+  -- Now need: ∑ x, (1/|S|) * (∑ s, f(x*s)) * g(x) = ∑ x, f(x) * (1/|S|) * (∑ s, g(x*s))
+  simp only [Finset.mul_sum, Finset.sum_mul]
+  -- Goal: ∑ x ∈ support, ∑ s, (1/|S|) * f(x*s) * g(x) = ∑ x ∈ support, ∑ s, f(x) * (1/|S|) * g(x*s)
+  -- The key insight is that both sums equal (1/|S|) * ∑ x ∈ support, ∑ s, f(x*s) * g(x)
+  -- by symmetry: ∑ x ∑ s f(x*s) * g(x) = ∑ y ∑ s f(y) * g(y*s⁻¹) (substituting y = x*s)
+  -- and since S is symmetric, s⁻¹ ranges over S, giving the same sum
+  -- This requires reindexing machinery beyond simple algebraic manipulation
   sorry
 
+omit [DecidableEq G] in
 /-- The spectrum of the discrete Laplacian is non-negative.
     Stated as: if f is an eigenfunction with eigenvalue lambda, then lambda >= 0. -/
 theorem spectrum_nonneg (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
@@ -146,6 +166,7 @@ theorem spectrum_nonneg (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
   -- If Delta f = lambda f, then lambda <f,f> = <Delta f, f> >= 0.
   sorry
 
+omit [DecidableEq G] in
 /-- The spectrum of the discrete Laplacian lies in [0, 2].
     Stated as: if f is an eigenfunction with eigenvalue lambda, then 0 <= lambda <= 2. -/
 theorem spectrum_in_interval (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
@@ -158,6 +179,7 @@ theorem spectrum_in_interval (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonemp
   -- and |<Af, f>| <= ||f||^2, so <Delta f, f> <= 2||f||^2.
   sorry
 
+omit [DecidableEq G] in
 /-- Characterization: f is harmonic iff f is in the kernel of the Laplacian. -/
 theorem harmonic_iff_kernel (hS_nonempty : S.Nonempty) (f : G → ℝ) :
     IsHarmonicSymmetric S f ↔ DiscreteLaplacian S f = 0 := by
@@ -183,6 +205,7 @@ noncomputable def SpectralGap : ℝ :=
   sInf {lambda : ℝ | lambda > 0 ∧
     ∃ (f : G → ℝ), (∃ x, f x ≠ 0) ∧ DiscreteLaplacian S f = lambda • f}
 
+omit [DecidableEq G] in
 /-- For groups with polynomial growth, 0 is in the closure of the spectrum of Delta
     restricted to l^2_0(G) (functions with zero mean). This reflects amenability. -/
 theorem polynomial_growth_spectrum_zero (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
@@ -194,10 +217,11 @@ theorem polynomial_growth_spectrum_zero (hS : Gromov.IsSymmetric S) (hS_nonempty
   -- This is related to the Kesten criterion for amenability.
   sorry
 
+omit [DecidableEq G] in
 /-- Amenability criterion via spectral gap: if the spectral gap is 0,
     the group is amenable. -/
-theorem amenable_of_spectral_gap_zero (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
-    (hS_gen : Subgroup.closure S = ⊤) (h : SpectralGap S = 0) :
+theorem amenable_of_spectral_gap_zero (_hS : Gromov.IsSymmetric S) (_hS_nonempty : S.Nonempty)
+    (_hS_gen : Subgroup.closure S = ⊤) (_h : SpectralGap S = 0) :
     True := by  -- Replace with actual amenability predicate when available
   -- Proof sketch: This is Kesten's theorem. Spectral gap 0 means the random walk
   -- has return probability going to 1/|S|, which is equivalent to amenability.

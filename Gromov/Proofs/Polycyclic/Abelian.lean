@@ -7,9 +7,6 @@ Finitely generated abelian groups and their polycyclic structure.
 
 import Gromov.Proofs.Polycyclic.Core
 
-set_option linter.style.emptyLine false
-set_option linter.style.longLine false
-
 /-!
 # Finitely Generated Abelian Groups and Polycyclic Structure
 
@@ -55,27 +52,8 @@ variable {G : Type*} [Group G]
 
 /-! ### Structure Theorem for Finitely Generated Abelian Groups -/
 
-/-- Finitely generated abelian groups are polycyclic.
-
-The proof uses the structure theorem for finitely generated abelian groups:
-every f.g. abelian group is isomorphic to Z^r x T where T is a finite abelian group.
-- Z^r is polycyclic: use the standard basis to get a series Z^r > Z^{r-1} > ... > Z > 1
-  with cyclic quotients (each isomorphic to Z).
-- T is finite and abelian (hence solvable), so T is polycyclic.
-- The product of polycyclic groups is polycyclic (concatenate the series).
-
-References:
-- Segal, D. "Polycyclic Groups" (1983), Corollary 1.1
-- Robinson, D.J.S. "A Course in the Theory of Groups" 2nd ed. (1996), Theorem 5.4.12
--/
-theorem isPolycyclic_of_fg_commGroup (H : Type*) [CommGroup H] [FG H] :
-    IsPolycyclic H := by
-  -- Proof strategy:
-  -- 1. Apply the structure theorem: H ≅ Z^r × T for some r and finite T
-  -- 2. Z^r is polycyclic (induction on r, Z is cyclic)
-  -- 3. T is finite abelian, hence polycyclic (finite solvable groups are polycyclic)
-  -- 4. Products of polycyclic groups are polycyclic
-  sorry
+-- Note: isPolycyclic_of_fg_commGroup is defined in Core.lean and imported here.
+-- See Core.lean for the theorem: Finitely generated abelian groups are polycyclic.
 
 /-- The structure theorem for finitely generated abelian groups.
 
@@ -86,19 +64,26 @@ Every finitely generated abelian group is isomorphic to Z^r x T where:
 This is a fundamental result in algebra. The torsion subgroup T can be further
 decomposed as a product of cyclic groups of prime power order.
 
+Note: This theorem requires significant infrastructure from Mathlib's module theory
+and linear algebra. We state it here for completeness but the proof relies on
+the classification of finitely generated modules over a PID.
+
 References:
 - Lang, S. "Algebra" 3rd ed. (2002), Chapter I, Theorem 10.3
 - Hungerford, T. "Algebra" (1974), Theorem 2.1
 -/
 theorem fg_abelian_structure (H : Type*) [CommGroup H] [FG H] :
     ∃ (r : Nat) (T : Type*) (_ : CommGroup T) (_ : Finite T),
-      Nonempty (H ≃* (Fin r → Multiplicative Int) × T) := by
-  -- Proof strategy:
-  -- 1. Take a finite generating set S for H
-  -- 2. Consider the free abelian group Z^|S| with surjection onto H
-  -- 3. The kernel K is a subgroup of Z^|S|, hence free abelian of rank ≤ |S|
-  -- 4. Use Smith normal form to get the structure
-  -- 5. The torsion part is finite, the free part has rank r = |S| - rank(K)
+      Nonempty (H ≃* (Fin r → Multiplicative ℤ) × T) := by
+  -- This is the fundamental structure theorem for f.g. abelian groups.
+  -- The proof requires:
+  -- 1. View H as a ℤ-module (via Additive H)
+  -- 2. Apply the structure theorem for f.g. modules over PIDs
+  -- 3. ℤ is a PID, so Additive H ≃ ℤ^r ⊕ ⨁ᵢ ℤ/nᵢℤ
+  -- 4. The torsion part T = ⨁ᵢ ℤ/nᵢℤ is finite
+  -- 5. Convert back to multiplicative notation
+  -- This requires Mathlib's Module.equiv_directSum_of_isTorsion and related machinery.
+  -- We defer to Mathlib's AddCommGroup.equiv_free_prod_directSum_zmod or similar.
   sorry
 
 /-! ### Lower Central Series Quotients -/
@@ -117,13 +102,16 @@ References:
 - Hall, P. "The Edmonton Notes on Nilpotent Groups" (1957)
 -/
 theorem lowerCentralSeries_quotient_fg (H : Type*) [Group H] [FG H] [IsNilpotent H]
-    (i : Nat) (hi : i < Group.nilpotencyClass H) :
-    FG (lowerCentralSeries H i ⧸ (lowerCentralSeries H (i + 1)).subgroupOf (lowerCentralSeries H i)) := by
-  -- Proof strategy:
-  -- 1. The quotient G_i/G_{i+1} is abelian (see lowerCentralSeries_quotient_comm)
-  -- 2. G_i is f.g. (subgroups of f.g. nilpotent groups are f.g.)
-  -- 3. Quotients of f.g. groups are f.g.
-  sorry
+    (i : Nat) (_hi : i < Group.nilpotencyClass H) :
+    FG (lowerCentralSeries H i ⧸
+      (lowerCentralSeries H (i + 1)).subgroupOf (lowerCentralSeries H i)) := by
+  -- In a f.g. nilpotent group, all subgroups are f.g. (Mal'cev)
+  -- This follows from polycyclicity + Mal'cev's theorem
+  have hpoly : IsPolycyclic H := isPolycyclic_of_isNilpotent_fg H
+  -- Subgroup.fg_of_polycyclic gives us FG ↥(lowerCentralSeries H i) directly
+  haveI : FG (lowerCentralSeries H i) := Subgroup.fg_of_polycyclic hpoly (lowerCentralSeries H i)
+  -- The quotient of a f.g. group by a normal subgroup is f.g.
+  exact QuotientGroup.fg _
 
 /-- Quotients G_i/G_{i+1} in the lower central series are abelian.
 
@@ -138,14 +126,28 @@ References:
 - Robinson, D.J.S. "A Course in the Theory of Groups" 2nd ed. (1996), Section 5.1
 -/
 theorem lowerCentralSeries_quotient_comm (H : Type*) [Group H] (i : Nat) :
-    ∀ x y : (lowerCentralSeries H i ⧸ (lowerCentralSeries H (i + 1)).subgroupOf (lowerCentralSeries H i)),
-      x * y = y * x := by
-  -- Proof strategy:
-  -- 1. For x, y in G_i, we need [x, y] ∈ G_{i+1}
-  -- 2. By definition, G_{i+1} = [G, G_i] = ⟨[g, h] : g ∈ G, h ∈ G_i⟩
-  -- 3. Since x, y ∈ G_i ⊆ G, we have [x, y] ∈ [G_i, G_i] ⊆ [G, G_i] = G_{i+1}
-  -- 4. Hence x * y * (y * x)^{-1} = [x, y] ∈ G_{i+1}, so x * y = y * x in the quotient
-  sorry
+    ∀ x y : (lowerCentralSeries H i ⧸
+      (lowerCentralSeries H (i + 1)).subgroupOf (lowerCentralSeries H i)),
+        x * y = y * x := by
+  intro x y
+  -- Lift x and y to representatives in lowerCentralSeries H i
+  induction x using Quotient.inductionOn with | h x =>
+  induction y using Quotient.inductionOn with | h y =>
+  -- Need to show (xy)⁻¹(yx) ∈ G_{i+1}, which follows from [y⁻¹, x⁻¹] ∈ G_{i+1}
+  simp only [← QuotientGroup.mk_mul]
+  rw [QuotientGroup.eq]
+  -- (x * y)⁻¹ * (y * x) = y⁻¹ * x⁻¹ * y * x = ⁅y⁻¹, x⁻¹⁆
+  -- Since y⁻¹ ∈ G_i ⊆ G and x⁻¹ ∈ G_i, we have ⁅y⁻¹, x⁻¹⁆ ∈ [G, G_i] = G_{i+1}
+  have hcomm : ⁅(y : H)⁻¹, (x : H)⁻¹⁆ ∈ lowerCentralSeries H (i + 1) := by
+    rw [lowerCentralSeries_succ]
+    apply Subgroup.commutator_mem_commutator
+    · exact (lowerCentralSeries H i).inv_mem y.property
+    · exact Subgroup.mem_top (x : H)⁻¹
+  -- Convert to the subgroupOf membership
+  rw [Subgroup.mem_subgroupOf]
+  convert hcomm using 1
+  simp only [Subgroup.coe_mul, Subgroup.coe_inv, mul_inv_rev, inv_inv, commutatorElement_def]
+  group
 
 /-- The quotient G_i/G_{i+1} is central in G/G_{i+1}.
 
@@ -158,11 +160,27 @@ understanding nilpotent groups.
 -/
 theorem lowerCentralSeries_quotient_central (H : Type*) [Group H] (i : Nat) :
     (lowerCentralSeries H i).map (QuotientGroup.mk' (lowerCentralSeries H (i + 1))) ≤
-      center (H ⧸ lowerCentralSeries H (i + 1)) := by
-  -- Proof strategy:
-  -- 1. For x ∈ G_i and g ∈ G, we need [g, x] ∈ G_{i+1}
-  -- 2. This is exactly the definition: G_{i+1} = [G, G_i]
-  -- 3. Hence gxg^{-1}x^{-1} ∈ G_{i+1}, so gx = xg in G/G_{i+1}
-  sorry
+      Subgroup.center (H ⧸ lowerCentralSeries H (i + 1)) := by
+  -- An element is central iff it commutes with all elements
+  intro x hx
+  rw [Subgroup.mem_center_iff]
+  intro g
+  -- x is the image of some x' ∈ G_i
+  obtain ⟨x', hx', rfl⟩ := Subgroup.mem_map.mp hx
+  -- g is some element of G/G_{i+1}; lift it
+  induction g using Quotient.inductionOn with | h g =>
+  -- Need: g * x' = x' * g in the quotient, i.e., (g * x')⁻¹ * (x' * g) ∈ G_{i+1}
+  simp only [QuotientGroup.mk'_apply, ← QuotientGroup.mk_mul]
+  rw [QuotientGroup.eq]
+  -- (g * x')⁻¹ * (x' * g) = x'⁻¹ * g⁻¹ * x' * g = ⁅x'⁻¹, g⁻¹⁆
+  -- Since x'⁻¹ ∈ G_i and g⁻¹ ∈ G, we have ⁅x'⁻¹, g⁻¹⁆ ∈ [G_i, G] = G_{i+1}
+  have hcomm : ⁅x'⁻¹, g⁻¹⁆ ∈ lowerCentralSeries H (i + 1) := by
+    rw [lowerCentralSeries_succ]
+    apply Subgroup.commutator_mem_commutator
+    · exact (lowerCentralSeries H i).inv_mem hx'
+    · exact Subgroup.mem_top g⁻¹
+  convert hcomm using 1
+  simp only [commutatorElement_def]
+  group
 
 end Group

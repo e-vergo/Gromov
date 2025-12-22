@@ -1,10 +1,3 @@
-/-
-Copyright 2025 The Formal Conjectures Authors.
-SPDX-License-Identifier: Apache-2.0
-
-Harmonic functions on Cayley graphs and the space of Lipschitz harmonic functions.
--/
-
 module
 
 public import Gromov.Proofs.Cayley.Graph

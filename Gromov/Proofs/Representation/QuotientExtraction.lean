@@ -49,6 +49,7 @@ section MaximumPrinciple
 
 variable (S : Set G) [Fintype S]
 
+omit [DecidableEq G] in
 /-- A harmonic function that is constant on a finite-index subgroup
     must be constant everywhere.
 
@@ -64,6 +65,7 @@ theorem maximum_principle_harmonic (hS : Gromov.IsSymmetric S) (hS_nonempty : S.
   -- then f must be constant everywhere. This uses connectedness of the Cayley graph.
   sorry
 
+omit [DecidableEq G] in
 /-- Corollary: A non-constant harmonic function cannot be constant on any
     finite-index subgroup. -/
 theorem nonconstant_harmonic_not_constant_on_finite_index (hS : Gromov.IsSymmetric S)
@@ -90,6 +92,7 @@ variable (S : Set G) [Fintype S]
 def leftTranslation (g : G) : (G → ℝ) → (G → ℝ) :=
   fun f x => f (g⁻¹ * x)
 
+omit [DecidableEq G] in
 /-- Left translation preserves the harmonic property. -/
 theorem left_translation_preserves_harmonic (hS : Gromov.IsSymmetric S)
     (g : G) (f : G → ℝ) (hf : IsHarmonicSymmetric S f) :
@@ -100,6 +103,7 @@ theorem left_translation_preserves_harmonic (hS : Gromov.IsSymmetric S)
   --                         = avg_{s∈S} (leftTranslation g f)(x*s)
   sorry
 
+omit [DecidableEq G] in
 /-- Left translation preserves the Lipschitz property. -/
 theorem left_translation_preserves_lipschitz (g : G) {L : ℝ} (f : G → ℝ)
     (hf : IsWordLipschitz S L f) :
@@ -109,13 +113,14 @@ theorem left_translation_preserves_lipschitz (g : G) {L : ℝ} (f : G → ℝ)
   -- Thus |f(g^{-1}*x) - f(g^{-1}*y)| <= L * d(g^{-1}*x, g^{-1}*y) = L * d(x, y).
   sorry
 
+omit [DecidableEq G] [Fintype S] in
 /-- The G-action on Lipschitz harmonic space modulo constants has precompact image
     when G has polynomial growth.
 
     This is because the action preserves the Lipschitz constant, and in finite
     dimensions bounded sets are precompact. -/
-theorem action_precompact (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
-    (hS_gen : Subgroup.closure S = ⊤) (hpoly : HasPolynomialGrowth G) (L : ℝ) (hL : L > 0) :
+theorem action_precompact (_hS : Gromov.IsSymmetric S) (_hS_nonempty : S.Nonempty)
+    (_hS_gen : Subgroup.closure S = ⊤) (_hpoly : HasPolynomialGrowth G) (L : ℝ) (_hL : L > 0) :
     True := by  -- Placeholder for: image of G in End(V/constants) is precompact
   -- Proof sketch:
   -- 1. The space V = LipschitzHarmonicSpace S L is finite-dimensional by Kleiner's theorem.
@@ -137,15 +142,16 @@ section FiniteImage
 
 variable (S : Set G) [Fintype S]
 
+omit [DecidableEq G] [Fintype S] in
 /-- If the G-action on V/constants has finite image, then every Lipschitz harmonic
     function is constant.
 
     This is a key dichotomy: either G has infinite image (giving a Z quotient)
     or all harmonic functions are constant (impossible for infinite groups). -/
-theorem finite_image_contradiction (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
-    (hS_gen : Subgroup.closure S = ⊤) (hpoly : HasPolynomialGrowth G) (hInf : Infinite G)
+theorem finite_image_contradiction (_hS : Gromov.IsSymmetric S) (_hS_nonempty : S.Nonempty)
+    (_hS_gen : Subgroup.closure S = ⊤) (_hpoly : HasPolynomialGrowth G) (_hInf : Infinite G)
     (V : Type*) [AddCommGroup V] [Module ℝ V] [FiniteDimensional ℝ V]
-    (ρ : G →* V →ₗ[ℝ] V) (hfin : (Set.range ρ).Finite) :
+    (ρ : G →* V →ₗ[ℝ] V) (_hfin : (Set.range ρ).Finite) :
     True := by  -- Placeholder for: contradiction with existence of non-constant harmonic
   -- Proof sketch:
   -- 1. If the image of G in End(V) is finite, let H = kernel of ρ.
@@ -210,6 +216,7 @@ section MainExtraction
 
 variable (S : Set G) [Fintype S]
 
+omit [DecidableEq G] in
 /-- Main theorem: An infinite finitely generated group with polynomial growth
     surjects onto Z.
 
@@ -267,10 +274,10 @@ theorem kernel_has_smaller_growth (G : Type*) [Group G] (hFG : Group.FG G)
 /-- The growth degree decreases by exactly 1 when quotienting to Z.
 
     This gives the induction measure for Gromov's theorem. -/
-theorem growth_degree_decreases (G : Type*) [Group G] (hFG : Group.FG G)
-    (hpoly : HasPolynomialGrowth G)
-    (φ : G →* ℤ) (hφ : Function.Surjective φ)
-    (d : ℕ) (hd : d > 0) :
+theorem growth_degree_decreases (G : Type*) [Group G] (_hFG : Group.FG G)
+    (_hpoly : HasPolynomialGrowth G)
+    (φ : G →* ℤ) (_hφ : Function.Surjective φ)
+    (d : ℕ) (_hd : d > 0) :
     True := by  -- Placeholder: degree(ker φ) < degree(G)
   -- Proof sketch: The growth degree is additive in short exact sequences
   -- 1 → ker(φ) → G → Z → 1, so degree(G) = degree(ker φ) + 1.

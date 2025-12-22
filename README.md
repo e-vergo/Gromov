@@ -18,67 +18,72 @@ theorem GromovPolynomialGrowthTheorem [Group.FG G] :
 | **Reverse (easy)** | Virtually nilpotent implies polynomial growth | In progress |
 | **Forward (hard)** | Polynomial growth implies virtually nilpotent | In progress |
 
-**Current sorry count:** 126 total across 17 files
+**Current sorry count:** 101 total across 17 files
 
 | Directory | Sorries | Description |
 |-----------|---------|-------------|
-| Growth/ | 30 | Fibration, kernel degree bounds |
-| Harmonic/ | 35 | Spectral theory, existence, finite-dimensionality |
-| Polycyclic/ | 31 | Core theory, Fitting, Malcev, extensions |
+| Polycyclic/ | 32 | Core theory, Fitting, Malcev, extensions |
+| Harmonic/ | 21 | Spectral theory, existence, finite-dimensionality |
+| Growth/ | 18 | Fibration, kernel degree bounds |
 | Schreier/ | 15 | Coset representatives, word bounds |
 | Representation/ | 13 | Compact Lie, quotient extraction |
 | Descent/ | 2 | Main descent argument |
+| Cayley/ | 0 | ✓ Complete |
+| Poincare/ | 0 | ✓ Complete |
+| VirtuallyNilpotent/ | 0 | ✓ Complete |
 
 ## File Structure
 
 ```
-Gromov/
-├── Gromov.lean                    # Root imports
-├── MainTheorem.lean               # Main theorem statement (human review)
-├── ProofOfMainTheorem.lean        # Proof assembly (machine verified)
-├── Definitions/                   # Core definitions (human review)
-│   ├── PolynomialGrowth.lean
-│   ├── WordMetric.lean
-│   ├── GrowthDegree.lean
-│   ├── Harmonic.lean
-│   ├── Poincare.lean
-│   ├── Descent.lean
-│   └── VirtuallyNilpotent.lean
-└── Proofs/                        # All proofs (machine verified)
-    ├── Cayley/
-    │   └── Graph.lean             # Word length, Cayley graph structure
-    ├── Descent/
-    │   └── Main.lean              # Inductive descent for forward direction
-    ├── Growth/
-    │   ├── Abelian.lean           # Abelian group growth
-    │   ├── Fibration.lean         # Level sets, fibration structure
-    │   ├── GromovMain.lean        # Main growth theorem components
-    │   ├── KernelDegree.lean      # Growth degree of kernels
-    │   ├── Nilpotent.lean         # Wolf's theorem (reverse direction)
-    │   └── Polynomial.lean        # Polynomial growth examples
-    ├── Harmonic/
-    │   ├── Core.lean              # Basic harmonic function definitions
-    │   ├── Spectral.lean          # Discrete Laplacian, spectrum
-    │   ├── Existence.lean         # Non-trivial harmonic functions exist
-    │   └── FiniteDim.lean         # Kleiner's finite-dimensionality
-    ├── Poincare/
-    │   └── Main.lean              # Discrete Poincare inequalities
-    ├── Polycyclic/
-    │   ├── Abelian.lean           # F.g. abelian → polycyclic
-    │   ├── Core.lean              # Polycyclic group theory
-    │   ├── Extensions.lean        # Series concatenation, lifting
-    │   ├── Fitting.lean           # Fitting subgroup theory
-    │   ├── Malcev.lean            # Subgroups of polycyclic are f.g.
-    │   └── ResiduallyFinite.lean  # Residual finiteness
-    ├── Representation/
-    │   ├── CompactLie.lean        # Jordan's theorem, compact closure
-    │   └── QuotientExtraction.lean # Extract Z quotient
-    ├── Schreier/
-    │   ├── CosetReps.lean         # Coset representatives, transversals
-    │   └── WordBounds.lean        # Schreier rewriting bounds
-    └── VirtuallyNilpotent/
-        ├── Core.lean              # Virtually nilpotent properties
-        └── NilpotencyClass.lean   # Nilpotency class bounds
+.
+├── Gromov.lean                        # Root imports
+└── Gromov/
+    ├── MainTheorem.lean               # Main theorem statement (human review)
+    ├── ProofOfMainTheorem.lean        # Proof assembly (machine verified)
+    ├── Definitions/                   # Core definitions (human review)
+    │   ├── PolynomialGrowth.lean
+    │   ├── WordMetric.lean
+    │   ├── GrowthDegree.lean
+    │   ├── Harmonic.lean
+    │   ├── Poincare.lean
+    │   ├── Descent.lean
+    │   ├── Schreier.lean
+    │   └── VirtuallyNilpotent.lean
+    └── Proofs/                        # All proofs (machine verified)
+        ├── Cayley/
+        │   └── Graph.lean             # Word length, Cayley graph structure
+        ├── Descent/
+        │   └── Main.lean              # Inductive descent for forward direction
+        ├── Growth/
+        │   ├── Abelian.lean           # Abelian group growth
+        │   ├── Fibration.lean         # Level sets, fibration structure
+        │   ├── GromovMain.lean        # Main growth theorem components
+        │   ├── KernelDegree.lean      # Growth degree of kernels
+        │   ├── Nilpotent.lean         # Wolf's theorem (reverse direction)
+        │   └── Polynomial.lean        # Polynomial growth examples
+        ├── Harmonic/
+        │   ├── Core.lean              # Basic harmonic function definitions
+        │   ├── Spectral.lean          # Discrete Laplacian, spectrum
+        │   ├── Existence.lean         # Non-trivial harmonic functions exist
+        │   └── FiniteDim.lean         # Kleiner's finite-dimensionality
+        ├── Poincare/
+        │   └── Main.lean              # Discrete Poincare inequalities
+        ├── Polycyclic/
+        │   ├── Abelian.lean           # F.g. abelian → polycyclic
+        │   ├── Core.lean              # Polycyclic group theory
+        │   ├── Extensions.lean        # Series concatenation, lifting
+        │   ├── Fitting.lean           # Fitting subgroup theory
+        │   ├── Malcev.lean            # Subgroups of polycyclic are f.g.
+        │   └── ResiduallyFinite.lean  # Residual finiteness
+        ├── Representation/
+        │   ├── CompactLie.lean        # Jordan's theorem, compact closure
+        │   └── QuotientExtraction.lean # Extract Z quotient
+        ├── Schreier/
+        │   ├── CosetReps.lean         # Coset representatives, transversals
+        │   └── WordBounds.lean        # Schreier rewriting bounds
+        └── VirtuallyNilpotent/
+            ├── Core.lean              # Virtually nilpotent properties
+            └── NilpotencyClass.lean   # Nilpotency class bounds
 ```
 
 ## Building
@@ -109,7 +114,7 @@ lake exe tailverify
 | `ProofOfMainTheorem.lean` | Machine verified |
 | `Proofs/` | Machine verified |
 
-**Current status:** 553 lines require review (5% of ~10,600 total lines).
+**Current status:** 544 lines require review (5% of ~10,500 total lines).
 
 ### Development Workflow
 

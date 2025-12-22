@@ -52,13 +52,13 @@ variable {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℂ V]
 
     This is the key algebraic estimate for compact Lie group arguments. -/
 theorem unitary_commutator_bound_statement :
-    ∀ (U V : V →ₗᵢ[ℂ] V),
+    ∀ (_U _V : V →ₗᵢ[ℂ] V),
     ∃ (C : ℝ), C ≥ 0 ∧ True := by
   -- Proof sketch: Write U = I + A, V = I + B with small A, B.
   -- Then UV^{-1}U^{-1}V = (I+A)(I+B)(I-A+O(A^2))(I-B+O(B^2))
   --              = I + (AB - BA) + O(AB^2 + A^2B)
   -- The linear term is the commutator [A,B] which has norm <= 2‖A‖·‖B‖.
-  intro U V
+  intro _U _V
   exact ⟨0, le_refl 0, trivial⟩
 
 end CommutatorBounds
@@ -178,10 +178,11 @@ section HarmonicRepresentation
 variable {G : Type*} [Group G] [DecidableEq G]
 variable (S : Set G) [Fintype S]
 
+omit [DecidableEq G] [Fintype S] in
 /-- The representation of G on the space of Lipschitz harmonic functions
     (modulo constants) is bounded because the Lipschitz condition is preserved. -/
-theorem harmonic_representation_bounded (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
-    (L : ℝ) (hL : L > 0) :
+theorem harmonic_representation_bounded (_hS : Gromov.IsSymmetric S) (_hS_nonempty : S.Nonempty)
+    (L : ℝ) (_hL : L > 0) :
     True := by  -- Placeholder for actual statement
   -- Proof sketch:
   -- 1. G acts by left translation on LipschitzHarmonicSpace S L.
@@ -189,9 +190,10 @@ theorem harmonic_representation_bounded (hS : Gromov.IsSymmetric S) (hS_nonempty
   -- 3. The action is isometric (preserves Lipschitz constant), hence bounded.
   trivial
 
+omit [DecidableEq G] [Fintype S] in
 /-- The image of the representation is precompact (has compact closure). -/
-theorem harmonic_representation_precompact (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
-    (hS_gen : Subgroup.closure S = ⊤) (hpoly : HasPolynomialGrowth G) (L : ℝ) (hL : L > 0) :
+theorem harmonic_representation_precompact (_hS : Gromov.IsSymmetric S) (_hS_nonempty : S.Nonempty)
+    (_hS_gen : Subgroup.closure S = ⊤) (_hpoly : HasPolynomialGrowth G) (L : ℝ) (_hL : L > 0) :
     True := by  -- Placeholder for actual statement
   -- Proof sketch: In finite dimensions, a bounded set of operators has compact closure.
   -- Combined with the Lipschitz-preserving property, this gives precompactness.

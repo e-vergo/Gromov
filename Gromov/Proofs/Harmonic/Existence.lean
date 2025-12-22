@@ -1,37 +1,8 @@
-/-
-Copyright 2025 The Gromov Project Authors.
-SPDX-License-Identifier: Apache-2.0
-
-Existence of non-trivial harmonic functions on groups with polynomial growth.
-
-This file establishes the existence of non-constant Lipschitz harmonic functions
-on infinite finitely generated groups with polynomial growth. This is a key step
-in the Kleiner-Tao-Shalom proof of Gromov's theorem.
-
-## Main Definitions
-
-* `CesaroAverage`: The Cesaro average f_n = (1/n) sum_{m=1}^n mu^{*m}
-* `AsymptoticallyHarmonic`: A sequence that becomes increasingly harmonic
-
-## Main Results
-
-* `cesaro_asymptotically_harmonic`: Cesaro averages are asymptotically harmonic
-* `lipschitz_harmonic_exists`: Existence of non-trivial Lipschitz harmonic function
-* `lipschitz_harmonic_nonconstant`: Can find non-constant Lipschitz harmonic
-
-## References
-
-* Tao-Shalom, Section 2 (Theorem 2 in overview)
-* Woess, "Random Walks on Infinite Graphs and Groups"
--/
-
 module
 
 public import Gromov.Proofs.Harmonic.Spectral
 public import Mathlib.Analysis.Normed.Group.Basic
 public import Mathlib.Topology.MetricSpace.Sequences
-
-set_option linter.style.longLine false
 
 namespace Gromov.Harmonic.Existence
 
@@ -69,6 +40,7 @@ noncomputable def CesaroAverage (n : ℕ) (f : G → ℝ) : G → ℝ :=
 noncomputable def HarmonicDefect (f : G → ℝ) (support : Finset G) : ℝ :=
   ∑ x ∈ support, |DiscreteLaplacian S f x|
 
+omit [DecidableEq G] in
 /-- Cesaro averages are asymptotically harmonic: the harmonic defect goes to 0.
     More precisely, ||f_n - A(f_n)||_{L^1} = O(1/n) where A is averaging. -/
 theorem cesaro_asymptotically_harmonic (hS_nonempty : S.Nonempty) (f : G → ℝ)
@@ -81,6 +53,7 @@ theorem cesaro_asymptotically_harmonic (hS_nonempty : S.Nonempty) (f : G → ℝ
   -- Thus the defect is O(1/n) -> 0.
   sorry
 
+omit [DecidableEq G] in
 /-- The Cesaro average preserves the Lipschitz property (with same constant). -/
 theorem cesaro_preserves_lipschitz {L : ℝ} (hL : 0 ≤ L) (n : ℕ) (f : G → ℝ)
     (hf : IsWordLipschitz S L f) :
@@ -101,6 +74,7 @@ section ExistenceTheorems
 
 variable (S : Set G) [Fintype S]
 
+omit [DecidableEq G] in
 /-- For non-amenable groups, there exist non-constant bounded harmonic functions.
     This uses the spectral gap being positive. -/
 theorem nonamenable_has_bounded_harmonic (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
@@ -111,6 +85,7 @@ theorem nonamenable_has_bounded_harmonic (hS : Gromov.IsSymmetric S) (hS_nonempt
   -- function gives a bounded harmonic function.
   sorry
 
+omit [DecidableEq G] in
 /-- For amenable groups, we can use spectral projections near eigenvalue 0
     to construct almost-harmonic functions that can be made exactly harmonic
     in a limiting sense. -/
@@ -123,6 +98,7 @@ theorem amenable_spectral_projection (hS : Gromov.IsSymmetric S) (hS_nonempty : 
   -- This gives almost-harmonic functions.
   sorry
 
+omit [DecidableEq G] in
 /-- Main existence theorem: For infinite finitely generated groups with polynomial growth,
     there exists a non-constant Lipschitz harmonic function.
 
@@ -139,6 +115,7 @@ theorem lipschitz_harmonic_exists (hS : Gromov.IsSymmetric S) (hS_nonempty : S.N
   -- 5. Polynomial growth ensures the limit is non-trivial.
   sorry
 
+omit [DecidableEq G] in
 /-- The Lipschitz harmonic function can be chosen to be non-constant.
     This is crucial for extracting a Z quotient. -/
 theorem lipschitz_harmonic_nonconstant (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
@@ -169,6 +146,7 @@ variable (S : Set G) [Fintype S]
 noncomputable def DiscreteGradient (f : G → ℝ) (x : G) : ℝ :=
   ⨆ s : S, |f (x * s.val) - f x|
 
+omit [DecidableEq G] in
 /-- For a harmonic function, the gradient at x is controlled by the L^infinity
     norm on a ball around x. This is a discrete mean value theorem. -/
 theorem harmonic_gradient_bound (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
@@ -180,13 +158,31 @@ theorem harmonic_gradient_bound (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Non
   -- oscillation over R-ball divided by R.
   sorry
 
+omit [DecidableEq G] in
 /-- For a Lipschitz harmonic function, there's a uniform gradient bound. -/
-theorem lipschitz_harmonic_uniform_gradient (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
-    {L : ℝ} (f : G → ℝ) (hf : IsHarmonicSymmetric S f) (hLip : IsWordLipschitz S L f) :
+theorem lipschitz_harmonic_uniform_gradient (_hS : Gromov.IsSymmetric S)
+    (hS_nonempty : S.Nonempty) {L : ℝ} (hL : 0 ≤ L) (f : G → ℝ)
+    (_hf : IsHarmonicSymmetric S f) (hLip : IsWordLipschitz S L f) :
     ∀ x, DiscreteGradient S f x ≤ L := by
-  -- Proof sketch: Direct from the Lipschitz condition, since neighbors differ
-  -- by word distance 1.
-  sorry
+  intro x
+  unfold DiscreteGradient
+  haveI : Nonempty S := hS_nonempty.to_subtype
+  apply ciSup_le
+  intro s
+  have hdist : wordDist S x (x * s.val) ≤ 1 := by
+    simp only [wordDist]
+    have heq : x⁻¹ * (x * s.val) = s.val := by group
+    rw [heq]
+    exact wordLength_generator S s.prop
+  have hLip' : |f (x * s.val) - f x| ≤ L * (wordDist S x (x * s.val) : ℝ) := by
+    rw [abs_sub_comm]
+    exact hLip x (x * s.val)
+  calc |f (x * s.val) - f x| ≤ L * (wordDist S x (x * s.val) : ℝ) := hLip'
+    _ ≤ L * 1 := by
+        apply mul_le_mul_of_nonneg_left
+        · exact_mod_cast hdist
+        · exact hL
+    _ = L := by ring
 
 end GradientBounds
 
@@ -200,17 +196,66 @@ section MaximumPrinciple
 
 variable (S : Set G) [Fintype S]
 
+omit [DecidableEq G] in
 /-- Discrete maximum principle: If f is harmonic and attains its maximum at x,
     then f is constant on the connected component of x in the Cayley graph. -/
-theorem maximum_principle (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
+theorem maximum_principle (hS : Gromov.IsSymmetric S) (_hS_nonempty : S.Nonempty)
     (hS_gen : Subgroup.closure S = ⊤) (f : G → ℝ) (hf : IsHarmonicSymmetric S f)
     (x : G) (hmax : ∀ g : G, f g ≤ f x) :
     ∀ g : G, f g = f x := by
-  -- Proof sketch: At a maximum, the harmonic condition f(x) = avg of neighbors
-  -- implies all neighbors have the same value (by convexity). Since G is connected
-  -- via the Cayley graph (S generates G), all of G has the same value.
-  sorry
+  -- Propagation lemma: if f(y) = f(x) then all S-neighbors also have the same value
+  have propagate : ∀ y : G, f y = f x → ∀ s : S, f (y * s.val) = f x := by
+    intro y hy s
+    have hsum_y := hf y
+    have hle_y : ∀ t : S, f (y * t.val) ≤ f y := fun t => by rw [hy]; exact hmax (y * t.val)
+    by_contra hne
+    have hlt : f (y * s.val) < f y := by rw [hy]; exact lt_of_le_of_ne (hmax (y * s.val)) hne
+    have strict_sum : ∑ t : S, f (y * t.val) < ∑ _t : S, f y := by
+      apply Finset.sum_lt_sum
+      · intro t _; exact hle_y t
+      · exact ⟨s, Finset.mem_univ s, hlt⟩
+    have sum_const_y : ∑ _t : S, f y = (Fintype.card S : ℝ) * f y := by
+      simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    linarith [hsum_y]
+  -- Also propagate to inverse neighbors (using symmetry of S)
+  have propagate_inv : ∀ y : G, f y = f x → ∀ s : S, f (y * s.val⁻¹) = f x := by
+    intro y hy s
+    have hs_inv : s.val⁻¹ ∈ S := hS s.val s.prop
+    exact propagate y hy ⟨s.val⁻¹, hs_inv⟩
+  -- Induction on list representing word: all elements reachable from x have same value
+  intro g
+  have hclosure := exists_cayleyBall_mem_of_closure_eq_top hS_gen (x⁻¹ * g)
+  obtain ⟨n, hn⟩ := hclosure
+  obtain ⟨l, hlen, hmem, hprod⟩ := hn
+  -- By induction on l, show that x * l.prod has f-value = f x
+  have key : ∀ (l : List G) (z : G), (∀ s ∈ l, s ∈ S ∨ s⁻¹ ∈ S) →
+    f z = f x → f (z * l.prod) = f x := by
+    intro l
+    induction l with
+    | nil => intro z _ hz; simp [hz]
+    | cons hd tl ih =>
+      intro z hmem_l hz
+      simp only [List.prod_cons]
+      have hmem_hd := hmem_l hd List.mem_cons_self
+      have hmem_tl : ∀ s ∈ tl, s ∈ S ∨ s⁻¹ ∈ S := fun s hs => hmem_l s (List.mem_cons_of_mem _ hs)
+      have hz_hd : f (z * hd) = f x := by
+        cases hmem_hd with
+        | inl h => exact propagate z hz ⟨hd, h⟩
+        | inr h =>
+          have h_inv : hd = (hd⁻¹)⁻¹ := by simp
+          rw [h_inv]
+          exact propagate_inv z hz ⟨hd⁻¹, h⟩
+      have := ih (z * hd) hmem_tl hz_hd
+      convert this using 1
+      group
+  -- Apply key to our situation: g = x * (x⁻¹ * g) = x * l.prod
+  have hg : g = x * l.prod := by
+    calc g = x * (x⁻¹ * g) := by group
+      _ = x * l.prod := by rw [hprod]
+  rw [hg]
+  exact key l x hmem rfl
 
+omit [DecidableEq G] in
 /-- Corollary: A harmonic function constant on a finite-index coset is constant everywhere. -/
 theorem harmonic_constant_on_coset (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
     (hS_gen : Subgroup.closure S = ⊤) (f : G → ℝ) (hf : IsHarmonicSymmetric S f)

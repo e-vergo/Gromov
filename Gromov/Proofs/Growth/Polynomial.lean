@@ -1,11 +1,3 @@
-/-
-Copyright 2025 The Formal Conjectures Authors.
-SPDX-License-Identifier: Apache-2.0
-
-Polynomial growth for groups: asymptotic definitions, independence of generating set,
-and basic properties.
--/
-
 module
 
 public import Mathlib.Algebra.Group.Subgroup.Basic

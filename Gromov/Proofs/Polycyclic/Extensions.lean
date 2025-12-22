@@ -7,9 +7,6 @@ Polycyclic series manipulation and extension theorems.
 
 import Gromov.Proofs.Polycyclic.Core
 
-set_option linter.style.emptyLine false
-set_option linter.style.longLine false
-
 /-!
 # Polycyclic Series Manipulation and Extensions
 

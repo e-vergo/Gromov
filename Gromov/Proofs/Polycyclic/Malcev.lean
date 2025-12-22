@@ -7,9 +7,6 @@ Mal'cev's theorem: Subgroups of polycyclic groups are finitely generated.
 
 import Gromov.Proofs.Polycyclic.Core
 
-set_option linter.style.emptyLine false
-set_option linter.style.longLine false
-
 /-!
 # Mal'cev's Theorem on Finite Generation
 

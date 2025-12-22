@@ -7,9 +7,6 @@ Fitting subgroup theory for polycyclic groups.
 
 import Gromov.Proofs.Polycyclic.Core
 
-set_option linter.style.emptyLine false
-set_option linter.style.longLine false
-
 /-!
 # Fitting Subgroup Theory
 
@@ -135,7 +132,8 @@ theorem fittingSubgroup_le (N : Subgroup G) [N.Normal] (hN : IsNilpotent N) :
 This combines the previous results: Fitting(G) is normal nilpotent, and
 any normal nilpotent subgroup is contained in it.
 -/
-theorem fittingSubgroup_eq_largest : fittingSubgroup G = sSup { N : Subgroup G | N.Normal ∧ IsNilpotent N } :=
+theorem fittingSubgroup_eq_largest :
+    fittingSubgroup G = sSup { N : Subgroup G | N.Normal ∧ IsNilpotent N } :=
   rfl
 
 /-! ### Fitting Subgroup of Polycyclic Groups -/
