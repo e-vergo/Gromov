@@ -219,7 +219,8 @@ theorem Subgroup.exists_list_of_mem_closure' {G : Type*} [Group G] {s : Set G} {
 
 /-! ### Lifting lemmas for quotients -/
 
-/-- **Cayley ball lifting lemma**: For the quotient of G by center G, Cayley balls of lifted
+/-
+**Cayley ball lifting lemma**: For the quotient of G by center G, Cayley balls of lifted
 generators are controlled by the Cayley balls in the quotient and center.
 
 This lemma states that for a central extension 1 → Z(G) → G → G/Z(G) → 1, if we lift
@@ -239,6 +240,7 @@ References:
 - Schreier, O. "Die Untergruppen der freien Gruppen" (1927)
 - de la Harpe, P. "Topics in Geometric Group Theory" Theorem II.8
 -/
+
 /-- Helper: the Subtype.val embedding from a subgroup preserves CayleyBall cardinality. -/
 private lemma cayleyBall_subtype_val_ncard {G : Type*} [Group G] (H : Subgroup G)
     (S : Set H) (n : ℕ) :
@@ -257,11 +259,10 @@ private lemma cayleyBall_subtype_val_ncard {G : Type*} [Group G] (H : Subgroup G
       cases hl_mem t ht with
       | inl htS => left; exact ⟨t, htS, rfl⟩
       | inr htinvS => right; simp only [← Subgroup.coe_inv]; exact ⟨t⁻¹, htinvS, rfl⟩
-    · simp only [List.map_prod]
-      rw [← hl_prod]
-      simp only [Subgroup.coe_list_prod]
+    · rw [← Subgroup.val_list_prod, hl_prod]
   -- Define the inverse map
-  have hmap_inv : ∀ g ∈ CayleyBall (Subtype.val '' S) n, ∃ h : H, (h : G) = g ∧ h ∈ CayleyBall S n := by
+  have hmap_inv : ∀ g ∈ CayleyBall (Subtype.val '' S) n, ∃ h : H,
+  (h : G) = g ∧ h ∈ CayleyBall S n := by
     intro g ⟨l, hl_len, hl_mem, hl_prod⟩
     -- Each element of l is in val '' S or has inverse in val '' S
     -- Since val is injective, we can lift each element back to H
@@ -273,7 +274,8 @@ private lemma cayleyBall_subtype_val_ncard {G : Type*} [Group G] (H : Subgroup G
         exact t.2
       | inr hsinvS =>
         obtain ⟨t, _, ht_eq⟩ := hsinvS
-        have : s = t⁻¹ := by simp [← ht_eq]
+        -- ht_eq : ↑t = s⁻¹, so s = (↑t)⁻¹
+        have : s = (t : G)⁻¹ := by rw [← inv_eq_iff_eq_inv]; exact ht_eq.symm
         rw [this]
         exact Subgroup.inv_mem H t.2
     -- Lift the list to H
@@ -283,8 +285,7 @@ private lemma cayleyBall_subtype_val_ncard {G : Type*} [Group G] (H : Subgroup G
       simp only [List.map_id']
     use l'.prod
     constructor
-    · simp only [Subgroup.coe_list_prod]
-      rw [← hl_prod, ← hl'_val, List.map_prod]
+    · rw [Subgroup.val_list_prod, hl'_val, hl_prod]
     · refine ⟨l', ?_, ?_, rfl⟩
       · simp only [l']
         rw [List.length_pmap]
@@ -302,23 +303,21 @@ private lemma cayleyBall_subtype_val_ncard {G : Type*} [Group G] (H : Subgroup G
         | inr hsinvS =>
           right
           obtain ⟨t', ht'S, ht'_eq⟩ := hsinvS
-          have hs_eq : s = (t' : G)⁻¹ := by simp [← ht'_eq]
-          have : (⟨s, hl_in_H s hs⟩ : H)⁻¹ = t' := by
+          -- ht'_eq : ↑t' = s⁻¹, so s = (↑t')⁻¹
+          have hs_eq : s = (t' : G)⁻¹ := by rw [← inv_eq_iff_eq_inv]; exact ht'_eq.symm
+          have h_elem_eq : (⟨s, hl_in_H s hs⟩ : H) = t'⁻¹ := by
             apply Subtype.ext
-            simp only [Subgroup.coe_inv, hs_eq, inv_inv]
-          rw [this]
+            simp only [Subgroup.coe_inv, hs_eq]
+          rw [h_elem_eq, inv_inv]
           exact ht'S
-  -- Now show the bijection preserves ncard
-  have hbij : Set.BijOn Subtype.val (CayleyBall S n) (CayleyBall (Subtype.val '' S) n) := by
-    constructor
-    · intro h hh; exact hmap h hh
-    constructor
-    · intro h1 _ h2 _ heq
-      exact Subtype.ext heq
-    · intro g hg
-      obtain ⟨h, hval, hball⟩ := hmap_inv g hg
-      exact ⟨h, hball, hval⟩
-  exact (Set.ncard_bijOn hbij).symm
+  -- Now show the bijection preserves ncard using Set.ncard_congr
+  symm
+  apply Set.ncard_congr (fun (h : H) (_ : h ∈ CayleyBall S n) => (h : G))
+  · intro h hh; exact hmap h hh
+  · intro h1 h2 _ _ heq; exact Subtype.ext heq
+  · intro g hg
+    obtain ⟨h, hval, hball⟩ := hmap_inv g hg
+    exact ⟨h, hball, hval⟩
 
 /-- Cayley ball bound for center quotient lifts.
 
@@ -358,71 +357,127 @@ private theorem cayleyBall_lift_bound_for_center_quotient {G : Type*} [Group G]
   -- The quotient map mk : G → G/Z(G) gives a surjection on CayleyBalls.
   -- We use that mk '' (CayleyBall S_Q_lifts m) = CayleyBall S_Q m and that
   -- ncard of a surjective image is ≤ ncard of the source.
-  apply Set.ncard_image_le (f := QuotientGroup.mk) |>.trans
-  -- Now need to show: ncard (mk '' CayleyBall S_Q_lifts m) ≥ ncard (CayleyBall S_Q m)
-  -- Which is actually that mk '' CayleyBall S_Q_lifts m = CayleyBall S_Q m
-  apply le_of_eq
-  -- Show mk '' CayleyBall S_Q_lifts m = CayleyBall S_Q m
-  ext q
-  constructor
-  · rintro ⟨g, hg, rfl⟩
-    -- g ∈ CayleyBall S_Q_lifts m, need to show mk g ∈ CayleyBall S_Q m
-    obtain ⟨l, hl_len, hl_mem, hl_prod⟩ := hg
-    refine ⟨l.map QuotientGroup.mk, ?_, ?_, ?_⟩
-    · simp [hl_len]
-    · intro s hs
-      simp only [List.mem_map] at hs
-      obtain ⟨g', hg', rfl⟩ := hs
-      have := hl_mem g' hg'
-      rcases this with hS | hSinv
-      · left
-        simp only [Set.mem_image] at hS ⊢
-        obtain ⟨qg, hqg, hqg_eq⟩ := hS
-        use qg, hqg
-        simp [← hqg_eq]
-      · right
-        simp only [Set.mem_image] at hSinv ⊢
-        obtain ⟨qg, hqg, hqg_eq⟩ := hSinv
-        use qg, hqg
-        simp [← hqg_eq]
-    · simp [← hl_prod]
-  · intro hq
-    -- q ∈ CayleyBall S_Q m, need g such that mk g = q and g ∈ CayleyBall S_Q_lifts m
-    obtain ⟨l, hl_len, hl_mem, hl_prod⟩ := hq
-    -- l is a list in G⧸Z with l.prod = q
-    -- We construct a lift by taking Quotient.out of each element
-    use (l.map lift).prod
+  -- First show the image equality
+  have hmk_image : QuotientGroup.mk '' CayleyBall S_Q_lifts m = CayleyBall S_Q m := by
+    -- Show mk '' CayleyBall S_Q_lifts m = CayleyBall S_Q m
+    ext q
     constructor
-    · refine ⟨l.map lift, ?_, ?_, rfl⟩
+    · rintro ⟨g, hg, rfl⟩
+      -- g ∈ CayleyBall S_Q_lifts m, need to show mk g ∈ CayleyBall S_Q m
+      obtain ⟨l, hl_len, hl_mem, hl_prod⟩ := hg
+      refine ⟨l.map QuotientGroup.mk, ?_, ?_, ?_⟩
       · simp [hl_len]
       · intro s hs
         simp only [List.mem_map] at hs
-        obtain ⟨q', hq', rfl⟩ := hs
-        have := hl_mem q' hq'
+        obtain ⟨g', hg', rfl⟩ := hs
+        have := hl_mem g' hg'
         rcases this with hS | hSinv
         · left
-          simp only [Set.mem_image]
-          exact ⟨q', hS, rfl⟩
+          -- hS : g' ∈ S_Q_lifts = lift '' S_Q
+          -- goal : ↑g' ∈ S_Q where ↑ : G → G ⧸ center G
+          obtain ⟨qg, hqg, hqg_eq⟩ := hS
+          -- hqg_eq : lift qg = g', so mk g' = mk (lift qg) = qg
+          rw [← hqg_eq]
+          -- Now need: ↑(lift qg) ∈ S_Q, i.e., QuotientGroup.mk (Quotient.out qg) ∈ S_Q
+          -- Since QuotientGroup.mk (Quotient.out qg) = qg
+          have h_eq : (QuotientGroup.mk (qg.out) : G ⧸ center G) = qg := QuotientGroup.out_eq' qg
+          rw [h_eq]
+          exact hqg
         · right
-          simp only [Set.mem_image]
-          -- q'⁻¹ ∈ S_Q, so (lift q')⁻¹ should relate to S_Q_lifts
-          -- (lift q')⁻¹ = (Quotient.out q')⁻¹
-          -- We have q'⁻¹ ∈ S_Q, so Quotient.out (q'⁻¹) ∈ lift '' S_Q = S_Q_lifts
-          -- But we need (Quotient.out q')⁻¹ ∈ S_Q_lifts
-          -- Note: Quotient.out (q'⁻¹) and (Quotient.out q')⁻¹ differ by a center element
-          -- This is where the naive approach breaks. We need a different argument.
-          -- Actually, for S_Q_lifts = lift '' S_Q, we have:
-          -- (lift q')⁻¹ ∈ S_Q_lifts iff ∃ r ∈ S_Q, (lift r)⁻¹ = (lift q')⁻¹
-          -- iff ∃ r ∈ S_Q, lift r = lift q'
-          -- But we only know q'⁻¹ ∈ S_Q, not q' ∈ S_Q
-          -- The CayleyBall definition uses s ∈ S ∨ s⁻¹ ∈ S, so we should be ok
-          use q'⁻¹, hSinv
-          simp only [QuotientGroup.mk_inv, QuotientGroup.out_eq']
-    · -- mk (l.map lift).prod = q
-      calc QuotientGroup.mk (l.map lift).prod = (l.map (QuotientGroup.mk ∘ lift)).prod := by
-            simp only [List.prod_map_hom QuotientGroup.mk, List.map_map]
-        _ = l.prod := by simp [Function.comp, Quotient.out_eq]
-        _ = q := hl_prod
+          -- hSinv : g'⁻¹ ∈ S_Q_lifts = lift '' S_Q
+          -- goal : (↑g')⁻¹ ∈ S_Q
+          obtain ⟨qg, hqg, hqg_eq⟩ := hSinv
+          -- hqg_eq : lift qg = g'⁻¹, so (↑g')⁻¹ = ↑(g'⁻¹) = ↑(lift qg) = qg
+          have h_goal : (QuotientGroup.mk g' : G ⧸ center G)⁻¹ = qg := by
+            have h1 : (QuotientGroup.mk g' : G ⧸ center G)⁻¹ =
+                QuotientGroup.mk (g'⁻¹) := (QuotientGroup.mk_inv (center G) g').symm
+            rw [h1]
+            -- Now need: ↑(g'⁻¹) = qg. We have g'⁻¹ = lift qg = qg.out
+            have h2 : g'⁻¹ = qg.out := hqg_eq.symm
+            rw [h2]
+            exact QuotientGroup.out_eq' qg
+          rw [h_goal]
+          exact hqg
+      · -- Use that (map QuotientGroup.mk l).prod = QuotientGroup.mk l.prod
+        -- First convert QuotientGroup.mk to QuotientGroup.mk' which is the same
+        have hmap_eq : l.map QuotientGroup.mk = l.map (QuotientGroup.mk' (center G)) := by
+          congr 1
+        rw [hmap_eq, List.prod_hom l (QuotientGroup.mk' (center G)), hl_prod]
+        exact QuotientGroup.mk'_apply (center G) g
+    · intro hq
+      -- q ∈ CayleyBall S_Q m, need g such that mk g = q and g ∈ CayleyBall S_Q_lifts m
+      obtain ⟨l, hl_len, hl_mem, hl_prod⟩ := hq
+      -- l is a list in G⧸Z with l.prod = q
+      -- We construct a lift by taking Quotient.out of each element
+      use (l.map lift).prod
+      constructor
+      · refine ⟨l.map lift, ?_, ?_, rfl⟩
+        · simp [hl_len]
+        · intro s hs
+          simp only [List.mem_map] at hs
+          obtain ⟨q', hq', rfl⟩ := hs
+          have := hl_mem q' hq'
+          rcases this with hS | hSinv
+          · left
+            exact ⟨q', hS, rfl⟩
+          · right
+            -- q'⁻¹ ∈ S_Q, need (lift q')⁻¹ ∈ S_Q_lifts = lift '' S_Q
+            -- The issue is (lift q')⁻¹ ≠ lift (q'⁻¹) in general.
+            -- But both have the same quotient: mk ((lift q')⁻¹) = (mk (lift q'))⁻¹ = q'⁻¹
+            -- And mk (lift (q'⁻¹)) = q'⁻¹
+            -- Since they differ by a center element z, we need to be more careful.
+            -- Actually, the goal is (lift q')⁻¹ ∈ lift '' S_Q
+            -- We use that ((lift q')⁻¹)⁻¹ = lift q' could be in S_Q_lifts if q' ∈ S_Q
+            -- But we have q'⁻¹ ∈ S_Q, not q' ∈ S_Q
+            -- The approach: show that lift (q'⁻¹) ∈ S_Q_lifts and that
+            -- (lift q')⁻¹ * (lift (q'⁻¹))⁻¹ ∈ center, so they represent the same in quotient
+            -- Actually for CayleyBall, we just need ∃ r ∈ S_Q, lift r = (lift q')⁻¹
+            -- This may not hold! Let's reconsider the proof.
+            -- Alternative: for CayleyBall membership, s ∈ S ∨ s⁻¹ ∈ S
+            -- We have s = lift q'. If s⁻¹ ∈ S_Q_lifts, need (lift q')⁻¹ ∈ lift '' S_Q
+            -- This requires lift r = (lift q')⁻¹ for some r ∈ S_Q
+            -- Since we only have q'⁻¹ ∈ S_Q and lift (q'⁻¹) ≠ (lift q')⁻¹ in general,
+            -- this approach doesn't work directly.
+            -- We need a different construction: use generators symmetrically
+            -- For now, we note that q' is in the quotient, so we can use q' or q'⁻¹
+            -- Since q'⁻¹ ∈ S_Q, we have lift (q'⁻¹) ∈ S_Q_lifts
+            -- The CayleyBall element is prod of (lift q_i) where q_i or q_i⁻¹ in S_Q
+            -- If q'⁻¹ ∈ S_Q, then lift q' has (lift q')⁻¹ which should work...
+            -- Actually, the CayleyBall definition says s ∈ S_Q_lifts ∨ s⁻¹ ∈ S_Q_lifts
+            -- We need (lift q')⁻¹ ∈ S_Q_lifts
+            -- We have q'⁻¹ ∈ S_Q, so lift (q'⁻¹) ∈ S_Q_lifts
+            -- Claim: (lift q')⁻¹ = lift (q'⁻¹) * z for some z ∈ center
+            -- mk ((lift q')⁻¹) = q'⁻¹ = mk (lift (q'⁻¹)), so they differ by center element
+            -- But membership in S_Q_lifts = lift '' S_Q requires exact equality
+            -- This seems to be a gap in the proof. Let me use sorry for now and note the issue
+            sorry
+      · -- mk (l.map lift).prod = q
+        -- We need: mk (l.map lift).prod = q = l.prod
+        -- Since mk (lift q') = q' for all q', we have:
+        -- mk (l.map lift).prod = (l.map (mk ∘ lift)).prod = l.prod
+        have hcomp : ∀ q' : G ⧸ center G, (QuotientGroup.mk' (center G)) (lift q') = q' := by
+          intro q'
+          rw [QuotientGroup.mk'_apply]
+          exact Quotient.out_eq' q'
+        rw [← hl_prod]
+        -- Use List.prod_hom.symm : f l.prod = (l.map f).prod
+        have hprod_hom := (List.prod_hom (l.map lift) (QuotientGroup.mk' (center G))).symm
+        simp only [QuotientGroup.mk'_apply] at hprod_hom
+        -- Now hprod_hom : ↑(l.map lift).prod = ((l.map lift).map QuotientGroup.mk).prod
+        rw [hprod_hom, List.map_map]
+        -- Goal: (l.map (QuotientGroup.mk' ∘ lift)).prod = l.prod
+        -- Since QuotientGroup.mk' ∘ lift = id by hcomp
+        have hfun_eq : (QuotientGroup.mk' (center G)) ∘ lift = id := funext hcomp
+        rw [hfun_eq, List.map_id]
+  -- Now use hmk_image to conclude
+  -- Note: ncard_image_le gives (f '' s).ncard ≤ s.ncard, i.e., the OPPOSITE direction!
+  -- We have: ncard (mk '' CayleyBall S_Q_lifts m) ≤ ncard (CayleyBall S_Q_lifts m)
+  -- By hmk_image: ncard (CayleyBall S_Q m) ≤ ncard (CayleyBall S_Q_lifts m)
+  -- But we NEED: ncard (CayleyBall S_Q_lifts m) ≤ ncard (CayleyBall S_Q m)
+  -- This is the WRONG direction! The theorem statement may be incorrect.
+  -- As noted in the docstring, this inequality may not hold in full generality.
+  -- We use sorry here pending a reformulation of the theorem.
+  sorry
 
 /-! ### Central extension growth bound -/
 
@@ -633,13 +688,10 @@ theorem hasPolynomialGrowth_of_nilpotencyClass_le :
     · rw [not_subsingleton_iff_nontrivial] at hsub
       haveI : Nontrivial G := hsub
       haveI hZ_nontriv : Nontrivial (center G) := nontrivial_center_of_isNilpotent
-
       -- center G is f.g.
       haveI : Group.FG (center G) := center_fg_of_fg_nilpotent
-
       -- center G is abelian, has polynomial growth
       have hZ_growth : HasPolynomialGrowth (center G) := commGroup_hasPolynomialGrowth'
-
       -- G/center G has class <= n
       haveI : Group.FG (G ⧸ center G) := QuotientGroup.fg (center G)
       have hQ_class : nilpotencyClass (G ⧸ center G) ≤ n := by
@@ -652,21 +704,17 @@ theorem hasPolynomialGrowth_of_nilpotencyClass_le :
           exact not_nontrivial_iff_subsingleton.mpr hsing ‹Nontrivial G›
         omega
       have hQ_growth : HasPolynomialGrowth (G ⧸ center G) := ih (G ⧸ center G) hQ_class
-
       -- Get generating sets and bounds
       obtain ⟨S_Z, hS_Z_fin, hS_Z_gen, C_Z, d_Z, hC_Z_pos, hbound_Z⟩ := hZ_growth
       obtain ⟨S_Q, hS_Q_fin, hS_Q_gen, C_Q, d_Q, hC_Q_pos, hbound_Q⟩ := hQ_growth
-
       -- Construct generating set for G
       let lift : G ⧸ center G → G := Quotient.out
       let S_Q_lifts : Set G := lift '' S_Q
       let S_Z_embed : Set G := Subtype.val '' S_Z
       let S_G : Set G := S_Q_lifts ∪ S_Z_embed
-
       have hS_Q_lifts_fin : S_Q_lifts.Finite := hS_Q_fin.image lift
       have hS_Z_embed_fin : S_Z_embed.Finite := hS_Z_fin.image Subtype.val
       have hS_G_fin : S_G.Finite := hS_Q_lifts_fin.union hS_Z_embed_fin
-
       -- S_G generates G: Any g ∈ G can be written as g = (lift q) * z where q = mk g
       -- and z ∈ center G. The lift q is in closure of S_Q_lifts (by lifting the
       -- closure property from quotient), and z is in closure of S_Z_embed.
@@ -746,7 +794,6 @@ theorem hasPolynomialGrowth_of_nilpotencyClass_le :
           have : (z : G) ∈ Subgroup.closure S_Z_embed := by
             rw [← hmap]; exact ⟨z, hz_gen, rfl⟩
           exact Subgroup.closure_mono Set.subset_union_right this
-
       -- Combine the growth bounds using the central extension bound
       use S_G, hS_G_fin, hS_G_gen
       use C_Z * C_Q * 2 ^ (d_Z + d_Q + 1), d_Z + d_Q
@@ -937,7 +984,8 @@ private theorem schreier_rewrite_bound {G : Type*} [Group G] {H : Subgroup G} [H
   -- Now we need: h ∈ CayleyBall (val '' S_H) ((index+1)*k) as an H-element,
   -- i.e., ⟨(h : G), h.2⟩ ∈ CayleyBall S_H ((index+1)*k).
   --
-  -- The core claim: any element h ∈ H ∩ CayleyBall S_G k is in CayleyBall (val '' S_H) ((index+1)*k).
+  -- The core claim: any element h ∈ H ∩ CayleyBall
+  -- S_G k is in CayleyBall (val '' S_H) ((index+1)*k).
   --
   -- This follows from the Schreier bound. Since we need to show this directly:
   -- We observe that the product of Schreier generators equals h (after conjugation),
@@ -946,6 +994,12 @@ private theorem schreier_rewrite_bound {G : Type*} [Group G] {H : Subgroup G} [H
   --
   -- Accept the bound using the standard result from combinatorial group theory.
   -- The bound (index + 1) * k is a well-known consequence of Schreier's lemma.
+  -- The list l comes from exists_list_of_mem_closure' which doesn't give length bounds.
+  -- We need to construct a list with bounded length using Schreier rewriting on lG.
+  -- This is non-trivial and requires implementing the Schreier bound algorithm.
+  -- For now, we use sorry pending the full Schreier bound implementation.
+  sorry
+  /- Original approach that doesn't work (can't clear l from goal):
   refine ⟨l, ?_, hl_mem, hl_prod⟩
   -- Need: l.length ≤ (H.index + 1) * k
   -- This is the non-trivial Schreier bound on word length.
@@ -1095,6 +1149,7 @@ private theorem schreier_rewrite_bound {G : Type*} [Group G] {H : Subgroup G} [H
         use lH'
         refine ⟨?_, hlH'_mem, hlH'_prod⟩
         sorry
+-/
 
 /-- **Schreier bound**: For a finite-index subgroup H ≤ G with index m, if an element h ∈ H
 can be written as a word of length k using generators S_G = val(S_H) ∪ reps (where S_H

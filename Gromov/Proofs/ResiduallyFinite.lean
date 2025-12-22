@@ -305,13 +305,13 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
               _ = (x * y * x⁻¹ * y⁻¹) * (y * x) := by rw [hxy]
               _ = x * y := by group
           -- L has CommGroup structure since L ≤ center H
-          haveI : CommGroup L := CommGroup.mk (fun a b => by
-            ext; simp only [Subgroup.coe_mul]
-            have ha : (a : H) ∈ center H := hL_le_center a.2
-            rw [Subgroup.mem_center_iff] at ha
-            exact (ha b).symm)
-          have hL_resid : IsResiduallyFinite L :=
-            sorry
+          have hL_comm : ∀ (a b : L), a * b = b * a := by
+            intro a b; apply Subtype.ext; simp only [Subgroup.coe_mul]
+            exact ((hL_le_center a.2).comm b).eq
+          -- Create CommGroup extending the existing Group instance (avoids instance diamond)
+          letI : CommGroup L := { (inferInstance : Group L) with mul_comm := hL_comm }
+          haveI : FG L := hL_fg  -- Re-register FG for current Group instance
+          have hL_resid : IsResiduallyFinite L := isResiduallyFinite_of_fg_commGroup L
           have hg_L_ne : (⟨g, hg_in_L⟩ : L) ≠ 1 := by
             intro h; apply hg; simp only [Subgroup.mk_eq_one] at h; exact h
           obtain ⟨M', hM'Norm, hM'Fin, hg_not_in_M'⟩ := hL_resid ⟨g, hg_in_L⟩ hg_L_ne
