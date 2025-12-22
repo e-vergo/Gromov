@@ -7,7 +7,7 @@ Virtual nilpotency class and examples.
 
 module
 
-public import Gromov.Proofs.ResiduallyFinite
+public import Gromov.Proofs.Polycyclic.ResiduallyFinite
 
 /-!
 # Virtual Nilpotency Class

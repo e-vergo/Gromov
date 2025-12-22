@@ -7,7 +7,7 @@ Cayley graphs and word metrics for groups.
 
 module
 
-public import Gromov.Proofs.GromovPolynomialGrowth
+public import Gromov.Proofs.Growth.GromovMain
 public import Gromov.Definitions.WordMetric
 public import Gromov.Definitions.GrowthDegree
 public import Mathlib.Data.Nat.Lattice

@@ -12,8 +12,8 @@ module
 public import Mathlib
 public import Gromov.MainTheorem
 public import Gromov.Definitions.PolynomialGrowth
-import Gromov.Proofs.NilpotentGrowth
-import Gromov.Proofs.Descent
+import Gromov.Proofs.Growth.Nilpotent
+import Gromov.Proofs.Descent.Main
 
 namespace Gromov
 

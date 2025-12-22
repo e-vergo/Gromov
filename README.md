@@ -15,69 +15,75 @@ theorem GromovPolynomialGrowthTheorem [Group.FG G] :
 
 | Direction | Statement | Status |
 |-----------|-----------|--------|
-| **Reverse (easy)** | Virtually nilpotent implies polynomial growth | In progress (2 sorries) |
-| **Forward (hard)** | Polynomial growth implies virtually nilpotent | In progress (4 sorries) |
+| **Reverse (easy)** | Virtually nilpotent implies polynomial growth | In progress |
+| **Forward (hard)** | Polynomial growth implies virtually nilpotent | In progress |
 
-**Current sorry count:** 15 total across 4 files
-- Polycyclic.lean: 8 sorries (polycyclic group infrastructure)
-- NilpotentGrowth.lean: 2 sorries (reverse direction)
-- ResiduallyFinite.lean: 1 sorry
-- Descent.lean: 4 sorries (forward direction)
+**Current sorry count:** 126 total across 17 files
 
-### Completed Infrastructure
-
-- Cayley ball definitions and basic properties
-- Word length / word metric infrastructure
-- Quasi-isometry between different generating sets
-- Polynomial growth definitions and asymptotic equivalence
-- Independence of growth rate from choice of generating set
-- Polynomial growth examples: finite groups, Z, Z^n
-- Products preserve polynomial growth
-- F.g. abelian groups have polynomial growth
-- Harmonic function infrastructure on Cayley graphs
-- Discrete Poincare inequalities
-- Descent argument structure (statements)
-
-### Remaining Work
-
-**Polycyclic infrastructure (8 sorries):**
-- `isPolycyclic_of_isNilpotent_fg`: F.g. nilpotent groups are polycyclic
-- `polycyclic_has_finiteIndex_nilpotent_normal_subgroup`: Fitting subgroup theorem
-- `isPolycyclic_of_finite`: Finite solvable groups are polycyclic
-- `isPolycyclic_subgroup`: Subgroups of polycyclic are polycyclic
-- `isPolycyclic_of_le`: Variant for subgroup inclusion
-- `isPolycyclic_of_extension`: Extensions preserve polycyclicity
-- `isPolycyclic_of_finiteIndex_polycyclic`: Finite extensions
-- `Subgroup.fg_of_polycyclic`: Mal'cev's theorem
-
-**Reverse direction (2 sorries):**
-- `cayleyBall_lift_bound_for_center_quotient`: Central extension bounds
-- `schreier_rewrite_bound`: Schreier's lemma for word length
-
-**Forward direction (4 sorries):**
-- `infinite_cyclic_quotient_of_polynomial_growth`: Kleiner's theorem
-- `kernel_growth_degree_lt`: Growth degree reduction
-- `isVirtuallyNilpotent_of_extension_by_Z`: Extension lemma (2 sorries)
+| Directory | Sorries | Description |
+|-----------|---------|-------------|
+| Growth/ | 30 | Fibration, kernel degree bounds |
+| Harmonic/ | 35 | Spectral theory, existence, finite-dimensionality |
+| Polycyclic/ | 31 | Core theory, Fitting, Malcev, extensions |
+| Schreier/ | 15 | Coset representatives, word bounds |
+| Representation/ | 13 | Compact Lie, quotient extraction |
+| Descent/ | 2 | Main descent argument |
 
 ## File Structure
 
 ```
 Gromov/
 ├── Gromov.lean                    # Root imports
-├── GromovPolynomialGrowth.lean    # Main theorem, Cayley balls, growth function
-├── CayleyGraph.lean               # Word length, word metric, quasi-isometry
-├── PolynomialGrowth.lean          # Growth definitions, examples (Z, Z^n)
-├── AbelianGrowth.lean             # Abelian group growth, product preservation
-├── VirtuallyNilpotent.lean        # Properties of virtually nilpotent groups
-├── NilpotentGrowth.lean           # Wolf's theorem (reverse direction)
-├── Harmonic.lean                  # Harmonic functions on Cayley graphs
-├── Poincare.lean                  # Discrete Poincare inequalities
-└── Descent.lean                   # Inductive descent for forward direction
+├── MainTheorem.lean               # Main theorem statement (human review)
+├── ProofOfMainTheorem.lean        # Proof assembly (machine verified)
+├── Definitions/                   # Core definitions (human review)
+│   ├── PolynomialGrowth.lean
+│   ├── WordMetric.lean
+│   ├── GrowthDegree.lean
+│   ├── Harmonic.lean
+│   ├── Poincare.lean
+│   ├── Descent.lean
+│   └── VirtuallyNilpotent.lean
+└── Proofs/                        # All proofs (machine verified)
+    ├── Cayley/
+    │   └── Graph.lean             # Word length, Cayley graph structure
+    ├── Descent/
+    │   └── Main.lean              # Inductive descent for forward direction
+    ├── Growth/
+    │   ├── Abelian.lean           # Abelian group growth
+    │   ├── Fibration.lean         # Level sets, fibration structure
+    │   ├── GromovMain.lean        # Main growth theorem components
+    │   ├── KernelDegree.lean      # Growth degree of kernels
+    │   ├── Nilpotent.lean         # Wolf's theorem (reverse direction)
+    │   └── Polynomial.lean        # Polynomial growth examples
+    ├── Harmonic/
+    │   ├── Core.lean              # Basic harmonic function definitions
+    │   ├── Spectral.lean          # Discrete Laplacian, spectrum
+    │   ├── Existence.lean         # Non-trivial harmonic functions exist
+    │   └── FiniteDim.lean         # Kleiner's finite-dimensionality
+    ├── Poincare/
+    │   └── Main.lean              # Discrete Poincare inequalities
+    ├── Polycyclic/
+    │   ├── Abelian.lean           # F.g. abelian → polycyclic
+    │   ├── Core.lean              # Polycyclic group theory
+    │   ├── Extensions.lean        # Series concatenation, lifting
+    │   ├── Fitting.lean           # Fitting subgroup theory
+    │   ├── Malcev.lean            # Subgroups of polycyclic are f.g.
+    │   └── ResiduallyFinite.lean  # Residual finiteness
+    ├── Representation/
+    │   ├── CompactLie.lean        # Jordan's theorem, compact closure
+    │   └── QuotientExtraction.lean # Extract Z quotient
+    ├── Schreier/
+    │   ├── CosetReps.lean         # Coset representatives, transversals
+    │   └── WordBounds.lean        # Schreier rewriting bounds
+    └── VirtuallyNilpotent/
+        ├── Core.lean              # Virtually nilpotent properties
+        └── NilpotencyClass.lean   # Nilpotency class bounds
 ```
 
 ## Building
 
-Requires Lean 4 and Mathlib v4.27.0-rc1.
+Requires Lean 4 and Mathlib.
 
 ```bash
 lake update
@@ -103,11 +109,11 @@ lake exe tailverify
 | `ProofOfMainTheorem.lean` | Machine verified |
 | `Proofs/` | Machine verified |
 
-**Current status:** 492 lines require review (6% of 8,017 total lines). TAIL verification passes.
+**Current status:** 553 lines require review (5% of ~10,600 total lines).
 
 ### Development Workflow
 
-TAIL verification should pass at all times during development:
+TAIL verification should pass when all sorries are cleared:
 
 1. **No axiom declarations** - Use `theorem ... := by sorry` for incomplete proofs
 2. **No native_decide** - Avoid kernel-level computation
@@ -141,3 +147,4 @@ The modern proof via Kleiner uses harmonic functions:
 - Gromov, M. "Groups of polynomial growth and expanding maps" (1981)
 - Kleiner, B. "A new proof of Gromov's theorem on groups of polynomial growth" (2010)
 - Tao, T. "Hilbert's Fifth Problem and Related Topics" (2014)
+- Tao, T. "A proof of Gromov's theorem" (blog post, 2010)

@@ -8,7 +8,7 @@ Discrete Poincare inequalities on Cayley graphs.
 module
 
 public import Gromov.Definitions.Poincare
-public import Gromov.Proofs.CayleyGraph
+public import Gromov.Proofs.Cayley.Graph
 public import Mathlib.Analysis.InnerProductSpace.Basic
 public import Mathlib.Algebra.BigOperators.Finprod
 

@@ -7,7 +7,7 @@ Polycyclic groups and their relationship to virtual nilpotency.
 
 module
 
-public import Gromov.Proofs.VirtuallyNilpotent
+public import Gromov.Proofs.VirtuallyNilpotent.Core
 
 set_option linter.style.emptyLine false
 set_option linter.style.longLine false

@@ -18,10 +18,10 @@ This file sets up the key definitions and theorem statements for this descent ar
 module
 
 public import Gromov.Definitions.Descent
-public import Gromov.Proofs.PolynomialGrowth
-public import Gromov.Proofs.VirtuallyNilpotent
-public import Gromov.Proofs.Polycyclic
--- Temporarily disabled: public import Gromov.Proofs.VirtualNilpotencyClass
+public import Gromov.Proofs.Growth.Polynomial
+public import Gromov.Proofs.VirtuallyNilpotent.Core
+public import Gromov.Proofs.Polycyclic.Core
+-- Temporarily disabled: public import Gromov.Proofs.VirtuallyNilpotent.NilpotencyClass
 
 set_option linter.style.longLine false
 

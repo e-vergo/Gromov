@@ -7,7 +7,7 @@ Polynomial growth for finitely generated abelian groups.
 
 module
 
-public import Gromov.Proofs.PolynomialGrowth
+public import Gromov.Proofs.Growth.Polynomial
 public import Mathlib.GroupTheory.FiniteAbelian.Basic
 
 /-!

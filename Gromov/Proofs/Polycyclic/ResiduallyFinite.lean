@@ -7,7 +7,7 @@ Residual finiteness of virtually nilpotent groups.
 
 module
 
-public import Gromov.Proofs.Polycyclic
+public import Gromov.Proofs.Polycyclic.Core
 
 /-!
 # Residual Finiteness

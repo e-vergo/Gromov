@@ -7,7 +7,7 @@ Harmonic functions on Cayley graphs and the space of Lipschitz harmonic function
 
 module
 
-public import Gromov.Proofs.CayleyGraph
+public import Gromov.Proofs.Cayley.Graph
 public import Gromov.Definitions.Harmonic
 public import Mathlib.Analysis.Normed.Group.Basic
 public import Mathlib.LinearAlgebra.Dimension.Finrank

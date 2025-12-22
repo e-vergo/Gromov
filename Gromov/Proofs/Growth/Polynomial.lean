@@ -24,7 +24,7 @@ public import Mathlib.Tactic.Positivity
 public import Mathlib.Data.Int.Interval
 public import Mathlib.Order.Interval.Set.Pi
 public import Mathlib.Order.Interval.Finset.Basic
-public import Gromov.Proofs.GromovPolynomialGrowth
+public import Gromov.Proofs.Growth.GromovMain
 public import Gromov.Definitions.GrowthDegree
 
 set_option linter.style.longLine false

@@ -8,10 +8,10 @@ This is the "easy direction" of Gromov's theorem.
 
 module
 
-public import Gromov.Proofs.PolynomialGrowth
-public import Gromov.Proofs.AbelianGrowth
-public import Gromov.Proofs.VirtuallyNilpotent
-public import Gromov.Proofs.VirtualNilpotencyClass
+public import Gromov.Proofs.Growth.Polynomial
+public import Gromov.Proofs.Growth.Abelian
+public import Gromov.Proofs.VirtuallyNilpotent.Core
+public import Gromov.Proofs.VirtuallyNilpotent.NilpotencyClass
 public import Mathlib.Algebra.EuclideanDomain.Int
 public import Mathlib.Algebra.Group.Subgroup.Map
 public import Mathlib.GroupTheory.Commutator.Basic
