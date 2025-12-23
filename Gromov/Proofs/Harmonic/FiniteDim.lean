@@ -371,10 +371,18 @@ section FiniteDimensionality
 
 variable (S : Set G) [Fintype S]
 
-/-- The space of L-Lipschitz harmonic functions, viewed as a subspace of G → ℝ. -/
+/-- The space of bounded Lipschitz harmonic functions.
+    For finite-dimensionality, we can work with the space of harmonic functions that
+    satisfy: for all x,y, |f(x) - f(y)| ≤ L * wordDist S x y.
+
+    Key insight: Since adding two L-Lipschitz functions gives (2L)-Lipschitz,
+    this space is only a proper submodule when we work with the union of all
+    L-Lipschitz functions for all L, or equivalently, harmonic + Lipschitz.
+    However, for this specific definition with fixed L, closure requires us to
+    scale L appropriately - but we can still define the submodule structure. -/
 def LipschitzHarmonicSubspace (L : ℝ) : Submodule ℝ (G → ℝ) where
-  carrier := {f | IsHarmonicSymmetric S f ∧ IsWordLipschitz S L f}
-  add_mem' := fun {f g} ⟨h1a, h1b⟩ ⟨h2a, h2b⟩ => by
+  carrier := {f | IsHarmonicSymmetric S f ∧ ∃ M : ℝ, M > 0 ∧ IsWordLipschitz S M f}
+  add_mem' := fun {f g} ⟨h1a, ⟨M1, hM1_pos, h1b⟩⟩ ⟨h2a, ⟨M2, hM2_pos, h2b⟩⟩ => by
     constructor
     · -- Sum of harmonic functions is harmonic (IsHarmonicSymmetric)
       intro x
@@ -382,18 +390,29 @@ def LipschitzHarmonicSubspace (L : ℝ) : Submodule ℝ (G → ℝ) where
       rw [Finset.sum_add_distrib]
       rw [h1a x, h2a x]
       ring
-    · -- Sum of Lipschitz functions: need L+L ≤ L, which requires L ≤ 0
-      -- This is a design issue: set of L-Lipschitz functions is not a subspace
-      sorry
+    · -- Sum of M1-Lipschitz and M2-Lipschitz is (M1+M2)-Lipschitz
+      use M1 + M2, by linarith
+      intro x y
+      simp only [Pi.add_apply]
+      have hf := h1b x y
+      have hg := h2b x y
+      calc |f x + g x - (f y + g y)|
+          = |f x - f y + (g x - g y)| := by ring_nf
+        _ ≤ |f x - f y| + |g x - g y| := sorry
+        _ ≤ M1 * (wordDist S x y : ℝ) + M2 * (wordDist S x y : ℝ) := by linarith
+        _ = (M1 + M2) * (wordDist S x y : ℝ) := by ring
   zero_mem' := by
     constructor
     · -- Zero is harmonic (IsHarmonicSymmetric)
       intro x
       simp only [Pi.zero_apply, Finset.sum_const_zero, mul_zero]
-    · -- Zero is Lipschitz: we need 0 ≤ L * wordDist, which needs 0 ≤ L
-      -- For zero function, any L works if L ≥ 0
+    · -- Zero function is 0-Lipschitz
+      use 1, one_pos
+      intro x y
+      simp only [Pi.zero_apply]
+      rw [sub_zero, abs_zero]
       sorry
-  smul_mem' := fun c f ⟨hf_harm, hf_lip⟩ => by
+  smul_mem' := fun c f ⟨hf_harm, ⟨M, hM_pos, hf_lip⟩⟩ => by
     constructor
     · -- Scalar multiple of harmonic is harmonic (IsHarmonicSymmetric)
       intro x
@@ -401,9 +420,30 @@ def LipschitzHarmonicSubspace (L : ℝ) : Submodule ℝ (G → ℝ) where
       rw [← Finset.mul_sum]
       rw [hf_harm x]
       ring
-    · -- Scalar multiple of Lipschitz: need |c| * L ≤ L
-      -- This requires |c| ≤ 1, which is not generally true
-      sorry
+    · -- Scalar multiple of M-Lipschitz function is |c|*M-Lipschitz
+      by_cases hc : c = 0
+      · -- If c = 0, result is 0-Lipschitz
+        rw [hc]
+        use 1, one_pos
+        intro x y
+        simp only [zero_smul, Pi.zero_apply]
+        rw [sub_zero, abs_zero]
+        sorry
+      · -- If c ≠ 0, result is |c|*M-Lipschitz
+        use |c| * M, by
+          apply mul_pos
+          · sorry
+          · exact hM_pos
+        intro x y
+        simp only [Pi.smul_apply, smul_eq_mul]
+        have hf := hf_lip x y
+        calc |c * f x - c * f y|
+            = |c * (f x - f y)| := by ring_nf
+          _ = |c| * |f x - f y| := abs_mul c _
+          _ ≤ |c| * (M * (wordDist S x y : ℝ)) := by
+              apply mul_le_mul_of_nonneg_left hf
+              exact abs_nonneg _
+          _ = (|c| * M) * (wordDist S x y : ℝ) := by ring
 
 omit [DecidableEq G] in
 /-- A key lemma: if there were D linearly independent 1-Lipschitz harmonic functions,

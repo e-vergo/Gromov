@@ -348,10 +348,8 @@ private theorem cayleyBall_lift_bound_for_center_quotient {G : Type*} [Group G]
           simp only [Function.comp_apply, QuotientGroup.mk'_apply, id_eq]
           exact hsmartLift_mk q'
         rw [hfun_eq, List.map_id]
-  have hinj : Set.InjOn (QuotientGroup.mk (s := center G)) (CayleyBall S_Q_lifts m) := by
-
-    sorry
-  rw [← hmk_image, Set.ncard_image_of_injOn hinj]
+  rw [← hmk_image]
+  sorry
 
 /-! ### Central extension growth bound -/
 

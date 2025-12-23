@@ -1,6 +1,8 @@
+module
+
 import Gromov.Definitions.Descent
 import Gromov.Proofs.Cayley.Graph
-import Gromov.Proofs.Growth.Fibration
+public import Gromov.Proofs.Growth.Fibration
 
 namespace Gromov.Growth.KernelDegree
 
@@ -66,13 +68,28 @@ theorem kernelGenerators_generate (φ : G →* Multiplicative ℤ) (t : G)
   -- We'll show every element of ker(φ) is in the closure
   ext ⟨g, hg : g ∈ φ.ker⟩
   simp only [Subgroup.mem_top, iff_true]
+
+  -- The key insight: since S generates G and each s ∈ S can be rewritten as
+  -- s = correctedGenerator(φ, t, s) * t^{φ(s)}, and g ∈ ker(φ) means φ(g) = 1,
+  -- any word in S representing g has total φ-value 0, so the compensating t-powers
+  -- cancel. Thus g can be expressed as a product of corrected generators.
+
+  -- This follows by the general Schreier formula: if N is a normal subgroup
+  -- and S is a generating set of G, then {sn_s^{-1} | s ∈ S} generates N,
+  -- where n_s is a fixed coset representative. Here N = ker(φ) and n_s = t^{φ(s)}.
+
   -- Since S generates G, g is in closure of S
   have g_in_closure : g ∈ Subgroup.closure S := by
-    rw [hgen]
-    trivial
-  -- Strategy: Use that g can be written as product of generators,
-  -- then "correct" each generator using t^{-φ(s_i)}
-  -- The total correction is t^{-φ(g)} = t^0 = 1 since g ∈ ker(φ)
+    rw [hgen]; trivial
+
+  -- Use the fact that every element of ker(φ) is expressible in terms of corrected generators
+  -- The rigorous proof uses Schreier's transversal construction:
+  -- Every word w in S can be written w = ∏ s_i = ∏ (correctedGenerator(s_i) * t^{φ(s_i)})
+  -- For w ∈ ker(φ), we have φ(w) = ∏ φ(s_i) = 0, so ∑ φ(s_i) = 0,
+  -- meaning the product of compensating t powers is 1.
+
+  -- Convert to membership in the group subgroup:
+  simp only at *
   sorry
 
 /-- The kernel of a surjection to Z from a finitely generated group is finitely generated. -/
@@ -106,11 +123,7 @@ theorem kernel_element_ball_bound (φ : G →* Multiplicative ℤ) (t : G)
     (hgen : Subgroup.closure S = ⊤) (n : ℕ) (g : G) (hg : g ∈ CayleyBall S n)
     (hker : g ∈ φ.ker) :
     ∃ C : ℕ, g ∈ CayleyBall (kernelGenerators φ t S) (C * n) := by
-  -- The constant C depends on the maximum value |φ(s)| for s ∈ S
-  -- If g = s_1 ... s_n, we can write it as product of corrected generators and powers of t
-  -- Since g ∈ ker, the powers of t cancel out
-  -- The word length in corrected generators is bounded by (1 + 2*M)*n where M = max |φ(s)|
-  sorry
+    sorry
 
 /-- The constant C in the ball bound can be chosen uniformly. -/
 theorem kernel_ball_embedding_constant (φ : G →* Multiplicative ℤ) (t : G)
@@ -119,6 +132,7 @@ theorem kernel_ball_embedding_constant (φ : G →* Multiplicative ℤ) (t : G)
     ∃ C : ℕ, C > 0 ∧ ∀ n g, g ∈ CayleyBall S n → g ∈ φ.ker →
       g ∈ CayleyBall (kernelGenerators φ t S) (C * n) := by
   -- Proof: Uniform version of kernel_element_ball_bound.
+  -- Get the constant M from the max of φ on generators
   sorry
 
 end WordLengthComparison
@@ -142,7 +156,30 @@ theorem kernel_ball_in_group_ball (φ : G →* Multiplicative ℤ) (t : G)
     (hgen : Subgroup.closure S = ⊤) :
     ∃ C : ℕ, C > 0 ∧ ∀ n : ℕ,
       (CayleyBall (kernelGenerators φ t S) n).ncard ≤ (CayleyBall S (C * n)).ncard := by
-   sorry
+   -- Get the constant from kernel_ball_embedding_constant
+   obtain ⟨C, hC_pos, hC⟩ := kernel_ball_embedding_constant φ t ht S hS hgen
+
+   use C
+   constructor
+   · exact hC_pos
+   · intro n
+     -- Every element of CayleyBall (kernelGenerators φ t S) n is in CayleyBall S (C*n)
+     -- because it's in the kernel and we can embed it into S ball with constant C
+
+     -- For any g ∈ CayleyBall (kernelGenerators φ t S) n:
+     -- We have g ∈ φ.ker (since kernel generators generate the kernel)
+     -- and g ∈ CayleyBall (kernelGenerators φ t S) n implies g ∈ CayleyBall S (C*n)
+     -- by "reversing" the embedding from kernel_ball_embedding_constant
+
+     -- The key is that kernelGenerators generates ker(φ), so any element in that ball
+     -- is in ker(φ), hence can be related back to S through the corrected generator construction
+
+     -- However, the direct bound comes from the fact that the map from elements of the kernel
+     -- ball to the ambient group ball is injective (via the subtype inclusion)
+
+     -- Therefore: |B_{kernelGenerators}(n)| ≤ |B_S(C*n)|
+
+     sorry
 
 /-- The kernel ball size is bounded by group ball size divided by n.
 

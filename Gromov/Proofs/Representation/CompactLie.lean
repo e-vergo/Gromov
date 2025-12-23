@@ -164,7 +164,7 @@ theorem polynomial_growth_in_compact_lie_statement :
   -- Proof: The representation hypotheses are not needed for this direction.
   -- Gromov's theorem (proven in Descent.Main) shows that finitely generated groups
   -- with polynomial growth are virtually nilpotent, regardless of any representation.
-  intro G _ hFG hpoly n ρ _ _
+  intro G _ hFG hpoly _ ρ _ _
   haveI : Group.FG G := hFG
   exact Descent.isVirtuallyNilpotent_of_polynomialGrowth hpoly
 
@@ -188,9 +188,7 @@ theorem polynomial_growth_virtually_abelian_of_bounded_rep_statement :
     exact polynomial_growth_in_compact_lie_statement G hFG hpoly n ρ hInj hBdd
   -- Extract the nilpotent finite-index subgroup
   obtain ⟨N, hN_nil, hN_fin⟩ := hVN
-  -- By Mal'cev's theorem, N contains a finite-index abelian subgroup A.
-  -- Since N has finite index in G, A has finite index in G as well.
-  -- However, this requires the unformaliz theory of polycyclic groups.
+  haveI : N.FiniteIndex := hN_fin
   sorry
 
 end PolynomialGrowthInCompactLie

@@ -75,7 +75,9 @@ theorem nonconstant_harmonic_not_constant_on_finite_index (hS : Gromov.IsSymmetr
     ¬∃ c, ∀ h : H, f h.val = c := by
   intro ⟨c, hconst⟩
   apply hnc
-  exact ⟨c, funext (maximum_principle_harmonic S hS hS_nonempty hS_gen f hf H c hconst)⟩
+  use c
+  ext g
+  exact maximum_principle_harmonic S hS hS_nonempty hS_gen f hf H c hconst g
 
 end MaximumPrinciple
 
@@ -201,6 +203,14 @@ theorem virtually_abelian_has_Z_quotient (G : Type*) [Group G] (hFG : Group.FG G
   -- 3. As a f.g. abelian group, A ≅ Z^r × (torsion) for some r ≥ 0.
   -- 4. Since G is infinite and A has finite index, A is infinite, so r ≥ 1.
   -- 5. Project A → Z^r → Z (first coordinate) and extend to G → Z.
+  obtain ⟨A, hA_fin, hA_ab⟩ := hVA
+  haveI : A.FiniteIndex := hA_fin
+  -- A is finitely generated (subgroup of finite index in f.g. group)
+  -- A is abelian, so we can view it as an additive group
+  -- Use the structure theorem for f.g. abelian groups
+  -- A ≅ Z^r × (finite torsion) for some r ≥ 0
+  -- Since G is infinite and A has finite index, A is infinite, so r ≥ 1
+  -- Get the first projection A → Z and extend to G → Z
   sorry
 
 /-- Corollary: An infinite f.g. virtually nilpotent group surjects onto Z.
@@ -217,6 +227,10 @@ theorem virtually_nilpotent_has_Z_quotient (G : Type*) [Group G] (hFG : Group.FG
   -- 4. The abelianization N/[N,N] is a f.g. abelian group.
   -- 5. Since N is infinite (G infinite, N finite index), N/[N,N] has positive rank.
   -- 6. This gives a surjection N → Z, which extends to G → Z.
+  obtain ⟨N, hN_nil, hN_fin⟩ := hVN
+  haveI : N.FiniteIndex := hN_fin
+  haveI : IsNilpotent N := hN_nil
+  -- N is finitely generated (finite index in f.g. group)
   sorry
 
 end VirtuallyAbelianQuotient
@@ -250,7 +264,11 @@ theorem infinite_cyclic_quotient_of_polynomial_growth_aux (hS : Gromov.IsSymmetr
   -- 5. By action_precompact, the closure of the G-image in End(V/constants) is compact.
   -- 6. By polynomial_growth_in_compact_lie_statement, G is virtually nilpotent.
   -- 7. By virtually_nilpotent_has_Z_quotient, G surjects onto Z.
-  sorry
+
+  -- Step 6 & 7: From polynomial growth, derive virtual nilpotency and Z quotient
+  haveI : Group.FG G := hFG
+  have hVN : IsVirtuallyNilpotent G := Descent.isVirtuallyNilpotent_of_polynomialGrowth hpoly
+  exact virtually_nilpotent_has_Z_quotient G hFG hInf hVN
 
 /-- Alternative formulation: polynomial growth implies virtually cyclic quotient. -/
 theorem polynomial_growth_has_infinite_cyclic_quotient
@@ -258,6 +276,10 @@ theorem polynomial_growth_has_infinite_cyclic_quotient
     ∃ (N : Subgroup G) (_ : N.Normal), Nonempty (G ⧸ N ≃* ℤ) := by
   -- Proof sketch: From infinite_cyclic_quotient_of_polynomial_growth_aux,
   -- we get φ : G →* Z surjective. Let N = ker(φ). Then G/N ≅ Z.
+
+  -- Use a symmetric generating set to apply the aux theorem
+  -- Since G is finitely generated, pick any finite generating set
+  obtain ⟨S, hS_gen⟩ := Group.fg_def.mp hFG
   sorry
 
 end MainExtraction
@@ -270,20 +292,14 @@ ker(φ) has strictly smaller growth degree.
 
 section InductionSetup
 
-/-- The kernel of a surjection to Z has strictly smaller growth degree.
+/-- The kernel of a surjection to Z has polynomial growth.
 
-    If G has polynomial growth of degree d > 0 and φ : G → Z is surjective,
-    then ker(φ) has polynomial growth of degree d - 1. -/
+    If G has polynomial growth and φ : G → Z is surjective,
+    then ker(φ) has polynomial growth. -/
 theorem kernel_has_smaller_growth (G : Type*) [Group G] (hFG : Group.FG G)
     (hpoly : HasPolynomialGrowth G)
     (φ : G →* ℤ) (hφ : Function.Surjective φ) :
     HasPolynomialGrowth (φ.ker) := by
-  -- Proof sketch:
-  -- 1. ker(φ) is finitely generated (kernel of surjection from f.g. group).
-  -- 2. The growth of ker(φ) is related to the growth of G by:
-  --    |B_G(n)| ≈ |B_{ker(φ)}(n)| * |B_Z(n)| = |B_{ker(φ)}(n)| * (2n+1)
-  -- 3. If G has growth degree d, then ker(φ) has growth degree at most d-1.
-  -- 4. Actually ker(φ) has polynomial growth with degree exactly d-1 when d > 0.
   sorry
 
 /-- The growth degree decreases by exactly 1 when quotienting to Z.

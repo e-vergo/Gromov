@@ -165,7 +165,22 @@ theorem schreier_rewrite_bound_aux [H.FiniteIndex]
     (S_G : Set G) (hS_G : S_G = Subtype.val '' S_H ∪ ↑reps)
     (k : ℕ) (h : G) (hh_mem : h ∈ H) (hh_ball : h ∈ CayleyBall S_G k) :
     ⟨h, hh_mem⟩ ∈ CayleyBall S_H ((H.index + 1) * k) := by
+  -- This is the fundamental Schreier rewriting bound.
+  -- The proof uses the Schreier algorithm: given a word in S_G representing h ∈ H,
+  -- we can rewrite it as a word in S_H using at most (H.index + 1) * k steps.
+  --
+  -- The key idea:
+  -- - We track coset representatives as we process the word
+  -- - When we see a letter from S_H, it stays in H
+  -- - When we see a representative from reps, we apply Schreier rewriting
+  --   to stay in H, using at most H.index additional steps
+  -- - Since h is in H at the end (by assumption), the rewriting is valid
+  --
+  -- The formal proof requires implementing the full Schreier algorithm,
+  -- which involves tracking coset membership and rewriting rules.
+  -- For now, we assert the result, which is a standard fact in group theory.
   sorry
+
 
 /-- **Main Schreier Rewriting Bound**: If h ∈ H can be written as a word of length k
 in generators S_G = S_H ∪ coset_reps, then h can be written as a word of length
@@ -223,7 +238,31 @@ theorem cayleyBall_subgroup_bound [H.FiniteIndex]
         CayleyBall S_G ((H.index + 1) * n) := by
     intro g hg
     obtain ⟨h, hh, rfl⟩ := hg
-    sorry  -- This requires the Schreier rewriting bound
+    simp only [CayleyBall, Set.mem_setOf_eq] at hh ⊢
+    obtain ⟨l_H, hl_H_len, hl_H_mem, hl_H_prod⟩ := hh
+    -- We need to show that (h : G) is in CayleyBall S_G ((H.index + 1) * n)
+    -- The key is that each element of l_H in S_H is also in S_G (via Subtype.val)
+    -- and we can use the word length in S_G
+    use List.map (Subtype.val : H → G) l_H
+    constructor
+    · simp only [List.length_map]
+      calc List.length l_H ≤ n := hl_H_len
+        _ ≤ (H.index + 1) * n := by sorry
+    constructor
+    · intro s hs
+      simp only [List.mem_map] at hs
+      obtain ⟨s_h, hs_h, rfl⟩ := hs
+      have : s_h ∈ S_H ∨ s_h⁻¹ ∈ S_H := hl_H_mem s_h hs_h
+      rcases this with h_mem | h_mem
+      · left
+        exact hS_compat ⟨s_h, h_mem, rfl⟩
+      · right
+        -- Need to show that Subtype.val s_h⁻¹ ∈ S_G
+        -- This is the negative of Subtype.val s_h which is in S_G
+        have : (↑s_h⁻¹ : G) = (↑s_h : G)⁻¹ := by sorry
+        sorry
+    · -- Show that the product of the mapped list equals the original element in G
+      sorry
   calc (CayleyBall S_H n).ncard
       = ((Subtype.val : H → G) '' CayleyBall S_H n).ncard :=
         (Set.ncard_image_of_injective _ Subtype.val_injective).symm
@@ -268,9 +307,13 @@ theorem polynomial_growth_of_subgroup_finiteIndex [H.FiniteIndex]
     · exact Finset.finite_toSet _
   constructor
   · -- S_G generates G
-    sorry  -- This requires showing S_H ∪ reps generates G
-  · -- S_G has polynomial growth
-    sorry  -- This requires bounding |B_G(n)| using |B_H(n)|
+    -- Key insight: S_H generates H, and reps gives one representative per coset
+    -- So every element of G = h * r for h ∈ H (product of S_H generators) and r ∈ reps
+    -- Therefore S_G = Subtype.val '' S_H ∪ reps generates G
+    rw [Subgroup.closure_union]
+    -- First show that closure(Subtype.val '' S_H) = H
+    sorry -- Requires detailed coset covering argument
+  sorry
 
 end
 

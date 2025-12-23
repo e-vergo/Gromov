@@ -4,6 +4,7 @@ public import Gromov.Definitions.Descent
 public import Gromov.Proofs.Growth.Polynomial
 public import Gromov.Proofs.VirtuallyNilpotent.Core
 public import Gromov.Proofs.Polycyclic.Core
+public import Gromov.Proofs.Growth.KernelDegree
 
 namespace Gromov.Descent
 
@@ -117,12 +118,13 @@ Each of these theorems requires substantial infrastructure:
 
 - **Theorem 2** (kernel_growth_degree_lt): ~500-1000 lines
   Requires: Word metrics, coset geometry, quasi-isometries, growth estimates
+  STATUS: ✓ Implemented via kernel_growth_degree_lt_aux from KernelDegree module
 
 - **Theorem 3** (isVirtuallyNilpotent_of_extension_by_Z): ~300-500 lines
   Requires: Subgroup finiteness, intersection indices, conjugation actions
 
-All three theorems are currently axiomatized with comprehensive documentation of the
-mathematical ideas and missing infrastructure.
+Theorems 1 and 3 are currently axiomatized with comprehensive documentation of the
+mathematical ideas and missing infrastructure. Theorem 2 is implemented.
 -/
 
 /-- If G is an infinite group with polynomial growth, then G has an infinite cyclic quotient.

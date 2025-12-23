@@ -45,6 +45,7 @@ finitely many generators. -/
 -- The set of quotient.out representatives works.
 theorem cosetReps_exist [H.FiniteIndex] :
     ∃ (R : Finset G), (1 : G) ∈ R ∧ IsCosetRepSet H (R : Set G) := by
+  obtain ⟨R₀, hR, hR1⟩ := H.exists_isComplement_right 1
   sorry
 
 /-- Coset representatives cover G: every element can be factored as (coset rep) * (element in H).
@@ -53,7 +54,11 @@ More precisely, for any g in G, there exists r in R and h in H such that g = h *
 -- The complement condition ensures G = H * R as a set.
 theorem cosetReps_cover {R : Set G} (hR : IsCosetRepSet H R) (_hR1 : (1 : G) ∈ R) (g : G) :
     ∃ r ∈ R, ∃ h ∈ H, g = h * r := by
-  sorry
+  have : g ∈ (H : Set G) * R := by
+    rw [hR.mul_eq]
+    trivial
+  obtain ⟨h, hh, r, hr, heq⟩ := Set.mem_mul.mp this
+  exact ⟨r, hr, h, hh, heq.symm⟩
 
 /-- The coset representative of an element is unique modulo H.
 If g = h_1 * r_1 = h_2 * r_2 with r_1, r_2 in R and h_1, h_2 in H, then r_1 = r_2. -/
@@ -64,7 +69,6 @@ theorem cosetReps_unique {R : Set G} (hR : IsCosetRepSet H R) {_g : G}
     {r₁ r₂ : G} (_hr₁ : r₁ ∈ R) (_hr₂ : r₂ ∈ R)
     {h₁ h₂ : G} (_hh₁ : h₁ ∈ H) (_hh₂ : h₂ ∈ H)
     (_heq : h₁ * r₁ = h₂ * r₂) : r₁ = r₂ := by
-  -- Use that hR is a complement, which gives uniqueness
   sorry
 
 /-! ### Schreier Generators -/
@@ -89,7 +93,8 @@ subgroup from generators of the ambient group. -/
 theorem schreierGenerators_generate (S : Set G) (hS : closure S = ⊤)
     (R : Set G) (hR : IsCosetRepSet H R) (_hR1 : (1 : G) ∈ R) :
     closure (schreierGenerators H S R hR) = ⊤ := by
-  sorry
+  unfold schreierGenerators
+  exact Subgroup.closure_mul_image_eq_top hR _hR1 hS
 
 /-- If S is finite and H has finite index, then the Schreier generators form a finite set.
 
@@ -101,6 +106,7 @@ bound here, only finiteness. -/
 theorem schreierGenerators_finite [H.FiniteIndex] {S : Finset G}
     {R : Finset G} (hR : IsCosetRepSet H (R : Set G)) :
     (schreierGenerators H (S : Set G) (R : Set G) hR).Finite := by
+  unfold schreierGenerators
   sorry
 
 /-- The cardinality of Schreier generators is at most [G:H] * |S|.
@@ -113,6 +119,7 @@ it shows that finite-index subgroups of finitely generated groups are finitely g
 theorem schreierGenerators_card_le [H.FiniteIndex] {S : Finset G}
     {R : Finset G} (hR : IsCosetRepSet H (R : Set G)) (_hR1 : (1 : G) ∈ R) :
     (schreierGenerators H (S : Set G) (R : Set G) hR).ncard ≤ R.card * S.card := by
+  unfold schreierGenerators
   sorry
 
 /-! ### Connection to Mathlib's Schreier Infrastructure -/
@@ -125,6 +132,7 @@ This is a packaging of the above results into a single existence statement. -/
 -- Apply schreierGenerators_generate and schreierGenerators_finite.
 theorem exists_finite_schreier_generators [H.FiniteIndex] [Group.FG G] :
     ∃ (T : Finset H), closure (T : Set H) = ⊤ := by
+  -- Get a finite generating set for G
   sorry
 
 end
