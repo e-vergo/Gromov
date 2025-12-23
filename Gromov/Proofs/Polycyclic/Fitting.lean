@@ -81,11 +81,51 @@ if all N_i are normal and g ∈ G, then gN_ig^{-1} = N_i for all i, so
 g(sSup N_i)g^{-1} = sSup (gN_ig^{-1}) = sSup N_i.
 -/
 theorem fittingSubgroup_normal : (fittingSubgroup G).Normal := by
-  -- Proof strategy:
-  -- 1. The Fitting subgroup is defined as sSup of normal subgroups
-  -- 2. sSup of normal subgroups is normal (each N_i is invariant under conjugation)
-  -- 3. For any g ∈ G and x ∈ Fitting(G), x is in some normal N, so gxg^{-1} ∈ N ⊆ Fitting(G)
-  sorry
+  -- Proof: sSup of normal subgroups is normal
+  -- For n ∈ fittingSubgroup G = sSup { N | N.Normal ∧ IsNilpotent N },
+  -- we show g * n * g⁻¹ ∈ fittingSubgroup G
+  constructor
+  intro n hn g
+  -- The fitting subgroup equals the closure of the union of all normal nilpotent subgroups
+  have h_eq : fittingSubgroup G =
+      Subgroup.closure (⋃ N ∈ { M : Subgroup G | M.Normal ∧ IsNilpotent M }, (N : Set G)) := by
+    unfold fittingSubgroup
+    apply le_antisymm
+    · apply sSup_le; intro N hN x hx; apply Subgroup.subset_closure; exact Set.mem_biUnion hN hx
+    · rw [Subgroup.closure_le]; intro x hx
+      rw [Set.mem_iUnion] at hx; obtain ⟨N, hx⟩ := hx
+      rw [Set.mem_iUnion] at hx; obtain ⟨hN, hxN⟩ := hx
+      exact le_sSup hN hxN
+  rw [h_eq] at hn ⊢
+  -- Use induction on the closure with predicate P(x) := g * x * g⁻¹ ∈ closure(union)
+  induction hn using Subgroup.closure_induction with
+  | mem x hx =>
+    -- x is in the union of all normal nilpotent N
+    rw [Set.mem_iUnion] at hx; obtain ⟨N, hx⟩ := hx
+    rw [Set.mem_iUnion] at hx; obtain ⟨hN, hxN⟩ := hx
+    have h_conj : g * x * g⁻¹ ∈ N := hN.1.conj_mem x hxN g
+    apply Subgroup.subset_closure
+    rw [Set.mem_iUnion]; use N
+    rw [Set.mem_iUnion]; use hN
+    exact h_conj
+  | one =>
+    apply Subgroup.subset_closure
+    -- Need to show g * 1 * g⁻¹ ∈ union - it equals 1, pick the bottom subgroup
+    rw [Set.mem_iUnion]; use ⊥
+    rw [Set.mem_iUnion]
+    refine ⟨?_, ?_⟩
+    · constructor <;> infer_instance
+    · simp
+  | mul x y _ _ ihx_conj ihy_conj =>
+    -- ihx_conj : g * x * g⁻¹ ∈ closure(...), ihy_conj : g * y * g⁻¹ ∈ closure(...)
+    have : g * (x * y) * g⁻¹ = (g * x * g⁻¹) * (g * y * g⁻¹) := by group
+    rw [this]
+    exact Subgroup.mul_mem _ ihx_conj ihy_conj
+  | inv x _ ihx_conj =>
+    -- ihx_conj : g * x * g⁻¹ ∈ closure(...)
+    have : g * x⁻¹ * g⁻¹ = (g * x * g⁻¹)⁻¹ := by group
+    rw [this]
+    exact Subgroup.inv_mem _ ihx_conj
 
 /-- The Fitting subgroup is nilpotent.
 
@@ -125,7 +165,8 @@ theorem fittingSubgroup_le (N : Subgroup G) [N.Normal] (hN : IsNilpotent N) :
   -- 1. Fitting(G) = sSup { M : M normal, M nilpotent }
   -- 2. N is in this set (by hypothesis: N normal and nilpotent)
   -- 3. Therefore N ≤ sSup { M : M normal, M nilpotent } = Fitting(G)
-  sorry
+  apply le_sSup
+  exact ⟨inferInstance, hN⟩
 
 /-- The Fitting subgroup is the largest normal nilpotent subgroup.
 
@@ -182,9 +223,9 @@ theorem polycyclic_has_finiteIndex_nilpotent (hP : IsPolycyclic G) :
   -- 4. Fitting(G) has finite index (fittingSubgroup_finiteIndex_of_polycyclic)
   refine ⟨fittingSubgroup G, ?_, ?_, ?_⟩
   · -- Fitting subgroup is normal
-    sorry
+    exact fittingSubgroup_normal
   · -- Fitting subgroup is nilpotent
-    sorry
+    exact fittingSubgroup_nilpotent
   · -- Fitting subgroup has finite index in polycyclic groups
     exact fittingSubgroup_finiteIndex_of_polycyclic hP
 

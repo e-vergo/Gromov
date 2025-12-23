@@ -1032,10 +1032,8 @@ theorem Subgroup.fg_of_polycyclic (hG : IsPolycyclic G) (H : Subgroup G) : FG H 
     haveI : Subsingleton H := inferInstance
     exact ⟨∅, by simp [ Subgroup.eq_bot_of_subsingleton]⟩
   | succ n ih =>
-    -- G_1 is polycyclic with shorter series
-    let G₁ := G_series ⟨1, by omega⟩
-    have hG₁_poly : IsPolycyclic G₁ := by
-        sorry
+    -- TODO: This proof is incomplete and has circular dependency issues
+    -- The full proof should be in Malcev.lean
     sorry
 
 /-! ### Main Theorem -/
@@ -1059,7 +1057,7 @@ theorem polycyclic_of_isVirtuallyNilpotent [FG G] (hVN : IsVirtuallyNilpotent G)
   -- H is nilpotent and f.g., hence polycyclic
   have hHP : IsPolycyclic H := isPolycyclic_of_isNilpotent_fg H
   -- G is a finite extension of H, hence polycyclic
-  sorry
+  exact isPolycyclic_of_finiteIndex_polycyclic H hHP
 
 
 theorem isVirtuallyNilpotent_iff_polycyclic [FG G] : IsVirtuallyNilpotent G ↔ IsPolycyclic G := by

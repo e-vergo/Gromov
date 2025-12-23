@@ -198,7 +198,7 @@ theorem height_inv (φ : G →* Multiplicative ℤ) (g : G) :
     where M is the maximum generator height. -/
 theorem height_bound_in_ball (φ : G →* Multiplicative ℤ) (S : Set G)
     (hS : S.Finite) (n : ℕ)
-    (M : ℤ) (hM : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ M)
+    (M : ℤ) (hM_nonneg : 0 ≤ M) (hM : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ M)
     (hM' : ∀ s ∈ S, |Multiplicative.toAdd (φ s⁻¹)| ≤ M) (g : G) (hg : g ∈ CayleyBall S n) :
     height φ g ≤ M * n := by
   simp only [CayleyBall, Set.mem_setOf_eq] at hg
@@ -224,13 +224,8 @@ theorem height_bound_in_ball (φ : G →* Multiplicative ℤ) (S : Set G)
       -- We use omega/positivity if possible, otherwise note this edge case.
       by_cases hn : n = 0
       · simp [hn]
-      · -- For n > 0 and S empty, we can't prove 0 ≤ M * n without knowing M ≥ 0.
-        -- The theorem implicitly requires M ≥ 0 for this edge case.
-        have : 0 ≤ M := by
-          -- This is unprovable from hypotheses when S is empty.
-          -- The theorem statement needs strengthening for this edge case.
-          sorry
-        exact mul_nonneg this (Nat.cast_nonneg _)
+      · -- For n > 0 and S empty, use the explicit M ≥ 0 hypothesis.
+        exact mul_nonneg hM_nonneg (Nat.cast_nonneg _)
   | cons s t ih =>
     simp only [List.length_cons] at hlen
     simp only [List.mem_cons, forall_eq_or_imp] at hl_gen
@@ -262,11 +257,11 @@ theorem height_bound_in_ball (φ : G →* Multiplicative ℤ) (S : Set G)
 
 /-- Corollary: elements in B_S(n) have bounded image under phi. -/
 theorem phi_bound_in_ball (φ : G →* Multiplicative ℤ) (S : Set G) (hS : S.Finite) (n : ℕ)
-    (M : ℤ) (hM : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ M)
+    (M : ℤ) (hM_nonneg : 0 ≤ M) (hM : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ M)
     (hM' : ∀ s ∈ S, |Multiplicative.toAdd (φ s⁻¹)| ≤ M) (g : G) (hg : g ∈ CayleyBall S n) :
     |Multiplicative.toAdd (φ g)| ≤ M * n := by
   -- Proof: This is exactly height_bound_in_ball by definition of height.
-  exact height_bound_in_ball φ S hS n M hM hM' g hg
+  exact height_bound_in_ball φ S hS n M hM_nonneg hM hM' g hg
 
 end HeightBounds
 
@@ -286,14 +281,14 @@ def intersectedLevels (φ : G →* Multiplicative ℤ) (S : Set G) (n : ℕ) : S
 
 /-- B_S(n) intersects at most 2*M*n + 1 level sets. -/
 theorem ball_intersects_bounded_levels (φ : G →* Multiplicative ℤ) (S : Set G) (hS : S.Finite)
-    (n : ℕ) (M : ℤ) (hM : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ M)
+    (n : ℕ) (M : ℤ) (hM_nonneg : 0 ≤ M) (hM : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ M)
     (hM' : ∀ s ∈ S, |Multiplicative.toAdd (φ s⁻¹)| ≤ M) :
     intersectedLevels φ S n ⊆ Set.Icc (-M * n) (M * n) := by
   intro k hk
   simp only [intersectedLevels, Set.mem_setOf_eq, levelSet, Set.Nonempty, Set.mem_inter_iff] at hk
   obtain ⟨g, hg_level, hg_ball⟩ := hk
   simp only [Set.mem_Icc]
-  have hbound := phi_bound_in_ball φ S hS n M hM hM' g hg_ball
+  have hbound := phi_bound_in_ball φ S hS n M hM_nonneg hM hM' g hg_ball
   rw [hg_level, toAdd_ofAdd] at hbound
   constructor <;> linarith [abs_le.mp hbound]
 
@@ -302,7 +297,23 @@ theorem intersectedLevels_card_bound (φ : G →* Multiplicative ℤ) (S : Set G
     (n : ℕ) (M : ℕ) (hM : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ M)
     (hM' : ∀ s ∈ S, |Multiplicative.toAdd (φ s⁻¹)| ≤ M) :
     (intersectedLevels φ S n).ncard ≤ 2 * M * n + 1 := by
-  sorry
+  have hM_int : ∀ s ∈ S, |Multiplicative.toAdd (φ s)| ≤ (M : ℤ) := fun s hs => by
+    exact_mod_cast hM s hs
+  have hM'_int : ∀ s ∈ S, |Multiplicative.toAdd (φ s⁻¹)| ≤ (M : ℤ) := fun s hs => by
+    exact_mod_cast hM' s hs
+  have hM_nonneg : 0 ≤ (M : ℤ) := Nat.cast_nonneg M
+  have hsub := ball_intersects_bounded_levels φ S hS n (M : ℤ) hM_nonneg hM_int hM'_int
+  calc (intersectedLevels φ S n).ncard
+      ≤ (Set.Icc (-(M : ℤ) * n) ((M : ℤ) * n)).ncard :=
+          Set.ncard_le_ncard hsub (Set.toFinite _)
+    _ = (Finset.Icc (-(M : ℤ) * n) ((M : ℤ) * n)).card := by
+        rw [Set.ncard_eq_toFinset_card']
+        rw [Set.toFinset_Icc]
+    _ = ((M : ℤ) * n + 1 - (-(M : ℤ) * n)).toNat := Int.card_Icc _ _
+    _ = (2 * (M : ℤ) * n + 1).toNat := by ring_nf
+    _ = 2 * M * n + 1 := by
+        have h1 : 2 * (M : ℤ) * n + 1 = ↑(2 * M * n + 1) := by norm_cast
+        rw [h1, Int.toNat_natCast]
 
 end BallIntersection
 

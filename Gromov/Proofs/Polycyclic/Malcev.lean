@@ -67,7 +67,14 @@ theorem fg_of_cyclic (H : Type*) [Group H] [IsCyclic H] : FG H := by
   -- 1. By definition, IsCyclic H means there exists g such that H = ⟨g⟩
   -- 2. So {g} is a finite generating set for H
   -- 3. Therefore H is finitely generated
-  sorry
+  obtain ⟨g, hg⟩ := IsCyclic.exists_generator (α := H)
+  rw [Group.fg_iff]
+  use {g}
+  constructor
+  · ext x
+    simp only [Subgroup.mem_closure_singleton, Subgroup.mem_top, iff_true]
+    exact hg x
+  · exact Set.finite_singleton g
 
 /-- Quotients of finitely generated groups are finitely generated.
 
@@ -80,7 +87,7 @@ theorem fg_of_quotient (H : Type*) [Group H] [FG H] (N : Subgroup H) [N.Normal] 
   -- 1. H is f.g., so there exists a finite set S with ⟨S⟩ = H
   -- 2. Let π : H → H/N be the quotient map
   -- 3. Then π(S) is finite and ⟨π(S)⟩ = H/N (quotient map is surjective)
-  sorry
+  infer_instance
 
 /-- Extensions of finitely generated groups are finitely generated.
 
@@ -90,15 +97,10 @@ Proof: Let N = ⟨a_1, ..., a_m⟩ and G/N = ⟨b_1N, ..., b_kN⟩ for some b_i 
 Then G = ⟨a_1, ..., a_m, b_1, ..., b_k⟩.
 -/
 theorem fg_of_extension (N : Subgroup G) [N.Normal] [FG N] [FG (G ⧸ N)] : FG G := by
-  -- Proof strategy:
-  -- 1. N is f.g., so N = ⟨a_1, ..., a_m⟩ for some a_i ∈ N
-  -- 2. G/N is f.g., so G/N = ⟨π(b_1), ..., π(b_k)⟩ for some b_j ∈ G
-  -- 3. Claim: G = ⟨a_1, ..., a_m, b_1, ..., b_k⟩
-  -- 4. Proof: For any g ∈ G, π(g) is in ⟨π(b_1), ..., π(b_k)⟩
-  --    So π(g) = π(b_1)^{e_1} ... π(b_k)^{e_k} for some integers e_i
-  --    Hence g * (b_1^{e_1} ... b_k^{e_k})^{-1} ∈ ker(π) = N
-  --    So g = n * b_1^{e_1} ... b_k^{e_k} for some n ∈ N
-  --    Since n ∈ N = ⟨a_1, ..., a_m⟩, we have g ∈ ⟨a_1, ..., a_m, b_1, ..., b_k⟩
+  -- This is a difficult proof that requires careful handling of lifts
+  -- For now, we leave it as sorry and note this is a well-known result
+  -- The proof requires showing that if N and G/N are f.g., then G is f.g.
+  -- by taking generators of N and lifts of generators of G/N
   sorry
 
 /-! ### Mal'cev's Theorem -/

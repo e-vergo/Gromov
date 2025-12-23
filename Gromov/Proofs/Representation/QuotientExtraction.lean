@@ -73,8 +73,9 @@ theorem nonconstant_harmonic_not_constant_on_finite_index (hS : Gromov.IsSymmetr
     (f : G → ℝ) (hf : IsHarmonicSymmetric S f) (hnc : ¬∃ c, f = fun _ => c)
     (H : Subgroup G) [H.FiniteIndex] :
     ¬∃ c, ∀ h : H, f h.val = c := by
-  -- Proof sketch: Contrapositive of maximum_principle_harmonic.
-  sorry
+  intro ⟨c, hconst⟩
+  apply hnc
+  exact ⟨c, funext (maximum_principle_harmonic S hS hS_nonempty hS_gen f hf H c hconst)⟩
 
 end MaximumPrinciple
 
@@ -97,21 +98,35 @@ omit [DecidableEq G] in
 theorem left_translation_preserves_harmonic (hS : Gromov.IsSymmetric S)
     (g : G) (f : G → ℝ) (hf : IsHarmonicSymmetric S f) :
     IsHarmonicSymmetric S (leftTranslation g f) := by
-  -- Proof sketch: The harmonic condition f(x) = avg_{s∈S} f(x*s) is
-  -- translation-invariant because:
-  -- (leftTranslation g f)(x) = f(g^{-1}*x) = avg_{s∈S} f(g^{-1}*x*s)
-  --                         = avg_{s∈S} (leftTranslation g f)(x*s)
-  sorry
+  intro x
+  unfold leftTranslation
+  -- Goal: ∑ s : S, f (g⁻¹ * (x * s.val)) = Fintype.card S * f (g⁻¹ * x)
+  -- Rewrite using associativity: g⁻¹ * (x * s) = (g⁻¹ * x) * s
+  conv_lhs => arg 2; ext s; rw [← mul_assoc]
+  -- Now apply hf to g⁻¹ * x
+  exact hf (g⁻¹ * x)
 
 omit [DecidableEq G] in
 /-- Left translation preserves the Lipschitz property. -/
 theorem left_translation_preserves_lipschitz (g : G) {L : ℝ} (f : G → ℝ)
     (hf : IsWordLipschitz S L f) :
     IsWordLipschitz S L (leftTranslation g f) := by
-  -- Proof sketch: The word metric is left-invariant:
-  -- d(g^{-1}*x, g^{-1}*y) = d(x, y).
-  -- Thus |f(g^{-1}*x) - f(g^{-1}*y)| <= L * d(g^{-1}*x, g^{-1}*y) = L * d(x, y).
-  sorry
+  intro x y
+  unfold leftTranslation
+  -- Need: |f (g⁻¹ * x) - f (g⁻¹ * y)| ≤ L * ↑(wordDist S x y)
+  -- Use left-invariance of wordDist: wordDist S x y = wordDist S (g⁻¹ * x) (g⁻¹ * y)
+  have h_left_inv : wordDist S (g⁻¹ * x) (g⁻¹ * y) = wordDist S x y := by
+    unfold wordDist
+    congr 1
+    calc (g⁻¹ * x)⁻¹ * (g⁻¹ * y)
+      _ = x⁻¹ * (g⁻¹)⁻¹ * (g⁻¹ * y) := by rw [mul_inv_rev]
+      _ = x⁻¹ * g * (g⁻¹ * y) := by rw [inv_inv]
+      _ = x⁻¹ * (g * (g⁻¹ * y)) := by rw [mul_assoc]
+      _ = x⁻¹ * ((g * g⁻¹) * y) := by rw [mul_assoc]
+      _ = x⁻¹ * (1 * y) := by rw [mul_inv_cancel]
+      _ = x⁻¹ * y := by rw [one_mul]
+  rw [← h_left_inv]
+  exact hf (g⁻¹ * x) (g⁻¹ * y)
 
 omit [DecidableEq G] [Fintype S] in
 /-- The G-action on Lipschitz harmonic space modulo constants has precompact image

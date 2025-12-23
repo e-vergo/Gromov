@@ -1,0 +1,205 @@
+/-
+Copyright 2025 The Gromov Project Authors.
+SPDX-License-Identifier: Apache-2.0
+
+Coset representatives and Schreier generators for finite-index subgroups.
+
+This file develops the theory of coset representatives and Schreier generators,
+building on Mathlib's `GroupTheory.Schreier`. The main results establish that:
+
+1. Finite-index subgroups have finite sets of coset representatives
+2. Schreier generators (of the form r * s * (rs)^{-1}) generate the subgroup
+3. When the ambient group is finitely generated, Schreier generators are finite
+
+## References
+
+* Schreier, O. "Die Untergruppen der freien Gruppen" Abh. Math. Semin. Hamburg (1927)
+* Lyndon & Schupp, "Combinatorial Group Theory" Springer (1977), Theorem 2.7
+* Hall, M. "The Theory of Groups" Macmillan (1959), Chapter 7
+* Mathlib.GroupTheory.Schreier
+-/
+
+module
+
+public import Gromov.Definitions.Schreier
+public import Mathlib.GroupTheory.Finiteness
+public import Mathlib.Data.Set.Card
+public import Mathlib.Data.Finset.Card
+
+namespace Gromov.Schreier.CosetReps
+
+@[expose] public section
+
+open Subgroup Gromov.Schreier
+open scoped Pointwise
+
+variable {G : Type*} [Group G] {H : Subgroup G}
+
+/-! ### Coset Representatives -/
+
+/-- For a finite-index subgroup, we can always find a finite set of coset representatives.
+This is the key finiteness result that allows Schreier's construction to produce
+finitely many generators. -/
+-- Proof: By definition of finite index, there are finitely many cosets H\G.
+-- Pick one representative from each coset to form the transversal.
+-- The set of quotient.out representatives works.
+theorem cosetReps_exist [H.FiniteIndex] :
+    ∃ (R : Finset G), (1 : G) ∈ R ∧ IsCosetRepSet H (R : Set G) := by
+  -- With finite index, we get a fintype on the quotient
+  letI : Fintype (G ⧸ H) := H.fintypeQuotientOfFiniteIndex
+  classical
+  -- Use Quotient.out to pick representatives from each coset
+  let R : Finset G := Finset.univ.image (fun (q : G ⧸ H) => Quotient.out q)
+  use R
+  constructor
+  · -- Show 1 ∈ R
+    rw [Finset.mem_image]
+    use QuotientGroup.mk (1 : G)
+    simp
+  · -- Show IsCosetRepSet H R
+    unfold IsCosetRepSet
+    -- The set range of Quotient.out forms a right transversal
+    have h_range_eq : (R : Set G) = Set.range (fun (q : G ⧸ H) => Quotient.out q) := by
+      ext x
+      simp [R, Set.mem_range]
+    rw [h_range_eq]
+    -- We use the bijective characterization: IsComplement S T iff (s,t) ↦ s*t is bijective
+    unfold Subgroup.IsComplement
+    -- Need to show: (h, r) ↦ h * r is bijective from (H : Set G) × (range Quotient.out) → G
+    constructor
+    · -- Injectivity
+      intro ⟨h1, r1⟩ ⟨h2, r2⟩ heq
+      simp at heq
+      obtain ⟨q1, hr1⟩ := r1.2
+      obtain ⟨q2, hr2⟩ := r2.2
+      have hq : q1 = q2 := by
+        rw [← Quotient.out_eq' q1, ← Quotient.out_eq' q2]
+        -- h1 * q1.out = h2 * q2.out
+        -- So q1.out and q2.out are in the same left coset
+        apply QuotientGroup.eq.mpr
+        show (Quotient.out q1)⁻¹ * Quotient.out q2 ∈ H
+        -- Substitute quotient outs with r1, r2
+        have h_eq1 : Quotient.out q1 = (↑r1 : G) := hr1
+        have h_eq2 : Quotient.out q2 = (↑r2 : G) := hr2
+        rw [h_eq1, h_eq2]
+        -- Now show (r1)⁻¹ * r2 ∈ H
+        -- From heq: h1 * r1 = h2 * r2, so r1⁻¹ * r2 = h1⁻¹ * h2 (modulo some calculation)
+        have : (↑r1 : G)⁻¹ * (↑r2 : G) = (↑r1 : G)⁻¹ * (↑h1 : G)⁻¹ * ((↑h2 : G) * (↑r2 : G)) := by
+          rw [← heq]
+          ring_nf
+          simp [mul_assoc]
+        rw [this]
+        refine mul_mem (mul_mem ?_ (mul_mem (inv_mem h1.2) h2.2)) ?_
+        · -- r1⁻¹ ∈ H? No, r1 is not necessarily in H
+          sorry
+        · -- r2 ∈ H? No, r2 is not necessarily in H
+          sorry
+      have hr_eq : r1 = r2 := by
+        ext
+        rw [← hr1, ← hr2, hq]
+      subst hr_eq
+      have hh_eq : h1 = h2 := by
+        ext
+        simp only [Subtype.coe_inj]
+        calc (↑h1 : G) = (↑h1 : G) * (↑r1 : G) * (↑r1 : G)⁻¹ := by group
+          _ = (↑h2 : G) * (↑r1 : G) * (↑r1 : G)⁻¹ := by rw [heq]
+          _ = (↑h2 : G) := by group
+      subst hh_eq
+      rfl
+    · -- Surjectivity
+      intro g
+      let q : G ⧸ H := QuotientGroup.mk g
+      let r := Quotient.out q
+      have hr : r ∈ Set.range (fun (q : G ⧸ H) => Quotient.out q) := ⟨q, rfl⟩
+      -- We have q.out ∈ coset of g, so g = h * q.out for some h ∈ H
+      have hcoset : QuotientGroup.mk g = QuotientGroup.mk r := by
+        rw [← Quotient.out_eq' q]
+        rfl
+      rw [QuotientGroup.eq] at hcoset
+      simp [r] at hcoset
+      use ⟨⟨g * r⁻¹, hcoset⟩, ⟨r, hr⟩⟩
+      simp [mul_inv_cancel_right]
+
+/-- Coset representatives cover G: every element can be factored as (coset rep) * (element in H).
+More precisely, for any g in G, there exists r in R and h in H such that g = h * r. -/
+-- Proof: This is the defining property of a right transversal.
+-- The complement condition ensures G = H * R as a set.
+theorem cosetReps_cover {R : Set G} (hR : IsCosetRepSet H R) (_hR1 : (1 : G) ∈ R) (g : G) :
+    ∃ r ∈ R, ∃ h ∈ H, g = h * r := by
+  sorry
+
+/-- The coset representative of an element is unique modulo H.
+If g = h_1 * r_1 = h_2 * r_2 with r_1, r_2 in R and h_1, h_2 in H, then r_1 = r_2. -/
+-- Proof: From g = h_1 * r_1 = h_2 * r_2, we get r_2 * r_1^{-1} = h_2^{-1} * h_1 in H.
+-- Since R is a transversal, distinct representatives lie in distinct cosets.
+-- Thus r_1 and r_2 must be equal.
+theorem cosetReps_unique {R : Set G} (hR : IsCosetRepSet H R) {_g : G}
+    {r₁ r₂ : G} (_hr₁ : r₁ ∈ R) (_hr₂ : r₂ ∈ R)
+    {h₁ h₂ : G} (_hh₁ : h₁ ∈ H) (_hh₂ : h₂ ∈ H)
+    (_heq : h₁ * r₁ = h₂ * r₂) : r₁ = r₂ := by
+  -- Use that hR is a complement, which gives uniqueness
+  sorry
+
+/-! ### Schreier Generators -/
+
+/-- Each Schreier generator lies in H.
+This is immediate from the construction: r * s * (bar(rs))^{-1} in H because
+rs and bar(rs) lie in the same H-coset. -/
+-- Proof: By construction, schreierGenerators is a subset of H.
+-- Specifically, g * (toRightFun g)^{-1} in H by the property of right transversals.
+theorem schreierGenerators_mem (S : Set G) (R : Set G) (hR : IsCosetRepSet H R)
+    (x : H) (_hx : x ∈ schreierGenerators H S R hR) : (x : G) ∈ H :=
+  x.2
+
+/-- Schreier generators generate H (Schreier's lemma).
+
+This is the core of Schreier's lemma: the elements r * s * (bar(rs))^{-1} generate
+the subgroup H. This allows us to construct explicit generators for any finite-index
+subgroup from generators of the ambient group. -/
+-- Proof: This is exactly Mathlib's `Subgroup.closure_mul_image_eq_top`.
+-- The key insight is that any h in H can be written as a word in S,
+-- and the Schreier rewriting process converts this to a word in Schreier generators.
+theorem schreierGenerators_generate (S : Set G) (hS : closure S = ⊤)
+    (R : Set G) (hR : IsCosetRepSet H R) (_hR1 : (1 : G) ∈ R) :
+    closure (schreierGenerators H S R hR) = ⊤ := by
+  sorry
+
+/-- If S is finite and H has finite index, then the Schreier generators form a finite set.
+
+The cardinality bound is |R| * |S| = [G:H] * |S|, though we don't prove the exact
+bound here, only finiteness. -/
+-- Proof: Schreier generators are indexed by R x S.
+-- If R is finite (from finite index) and S is finite, then R x S is finite,
+-- so the image under the Schreier map is finite.
+theorem schreierGenerators_finite [H.FiniteIndex] {S : Finset G}
+    {R : Finset G} (hR : IsCosetRepSet H (R : Set G)) :
+    (schreierGenerators H (S : Set G) (R : Set G) hR).Finite := by
+  sorry
+
+/-- The cardinality of Schreier generators is at most [G:H] * |S|.
+
+This is the explicit bound from Schreier's lemma. Combined with finite generation,
+it shows that finite-index subgroups of finitely generated groups are finitely generated. -/
+-- Proof: Each Schreier generator corresponds to a pair (r, s) in R x S.
+-- The map (r, s) -> r * s * (bar(rs))^{-1} may not be injective,
+-- but the image size is at most |R| * |S|.
+theorem schreierGenerators_card_le [H.FiniteIndex] {S : Finset G}
+    {R : Finset G} (hR : IsCosetRepSet H (R : Set G)) (_hR1 : (1 : G) ∈ R) :
+    (schreierGenerators H (S : Set G) (R : Set G) hR).ncard ≤ R.card * S.card := by
+  sorry
+
+/-! ### Connection to Mathlib's Schreier Infrastructure -/
+
+/-- When H has finite index, there exists a finite generating set for H derived from
+any finite generating set for G via Schreier's construction.
+
+This is a packaging of the above results into a single existence statement. -/
+-- Proof: Take R to be the Quotient.out representatives, S any finite generating set of G.
+-- Apply schreierGenerators_generate and schreierGenerators_finite.
+theorem exists_finite_schreier_generators [H.FiniteIndex] [Group.FG G] :
+    ∃ (T : Finset H), closure (T : Set H) = ⊤ := by
+  sorry
+
+end
+
+end Gromov.Schreier.CosetReps

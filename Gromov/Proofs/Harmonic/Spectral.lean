@@ -131,10 +131,6 @@ theorem discreteLaplacian_selfAdjoint (hS : Gromov.IsSymmetric S)
   -- Expand the Laplacian: Delta f = f - Af where A is averaging
   simp only [discreteLaplacian_eq]
   -- Both sides expand to: sum f*g - (1/|S|) * (cross term)
-  -- We need to show the cross terms are equal:
-  -- sum_x (sum_s f(x*s)) * g(x) = sum_x f(x) * (sum_s g(x*s))
-  -- Rewrite as: sum_x sum_s f(x*s) * g(x) = sum_x sum_s f(x) * g(x*s)
-  -- By substitution y = x*s and symmetry of S (s^{-1} ∈ S), these are equal
   have h1 : ∀ x ∈ support, (f x - 1 / ↑(Fintype.card S) * ∑ s : S, f (x * s.val)) * g x =
             f x * g x - 1 / ↑(Fintype.card S) * (∑ s : S, f (x * s.val)) * g x := by
     intros; ring
@@ -144,13 +140,18 @@ theorem discreteLaplacian_selfAdjoint (hS : Gromov.IsSymmetric S)
   rw [Finset.sum_congr rfl h1, Finset.sum_congr rfl h2]
   simp only [Finset.sum_sub_distrib]
   congr 1
-  -- Now need: ∑ x, (1/|S|) * (∑ s, f(x*s)) * g(x) = ∑ x, f(x) * (1/|S|) * (∑ s, g(x*s))
+  -- Need: ∑ x ∈ support, (1/|S|) * (∑ s, f(x*s)) * g(x) = ∑ x ∈ support, f(x) * (1/|S|) * (∑ s, g(x*s))
   simp only [Finset.mul_sum, Finset.sum_mul]
-  -- Goal: ∑ x ∈ support, ∑ s, (1/|S|) * f(x*s) * g(x) = ∑ x ∈ support, ∑ s, f(x) * (1/|S|) * g(x*s)
-  -- The key insight is that both sums equal (1/|S|) * ∑ x ∈ support, ∑ s, f(x*s) * g(x)
-  -- by symmetry: ∑ x ∑ s f(x*s) * g(x) = ∑ y ∑ s f(y) * g(y*s⁻¹) (substituting y = x*s)
-  -- and since S is symmetric, s⁻¹ ranges over S, giving the same sum
-  -- This requires reindexing machinery beyond simple algebraic manipulation
+  -- This requires a sophisticated reindexing argument
+  -- Key: ∑_x ∑_s f(x*s)*g(x) = ∑_s ∑_x f(x*s)*g(x) = ∑_s ∑_y f(y)*g(y*s⁻¹) = ∑_x ∑_s f(x)*g(x*s)
+  -- where we use change of variables y = x*s and symmetry s⁻¹ ∈ S
+  -- However, this proof is quite intricate for arbitrary support sets
+  -- The key difficulty: need to show the sums are equal by reindexing over the finite support
+  -- This requires showing that right-multiplication by s permutes support (up to support conditions)
+
+  -- Alternative approach: recognize both sides represent the same bilinear form
+  -- LHS and RHS differ by a reindexing that uses the group structure
+  -- For now, this is a deep result that requires careful handling of the finite support assumption
   sorry
 
 omit [DecidableEq G] in
@@ -173,11 +174,16 @@ theorem spectrum_in_interval (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonemp
     (f : G → ℝ) (lambda : ℝ) (hf_nonzero : ∃ x, f x ≠ 0)
     (hf_eigen : DiscreteLaplacian S f = lambda • f) :
     0 ≤ lambda ∧ lambda ≤ 2 := by
-  -- Proof sketch: We have Delta = I - A where A has operator norm 1
-  -- (since it's an average of isometries). Thus spectrum(Delta) in [0, 2].
-  -- For the upper bound: <Delta f, f> = <f, f> - <Af, f>
-  -- and |<Af, f>| <= ||f||^2, so <Delta f, f> <= 2||f||^2.
-  sorry
+  constructor
+  · exact spectrum_nonneg S hS hS_nonempty f lambda hf_nonzero hf_eigen
+  · -- Upper bound: lambda ≤ 2
+    -- From Delta f = lambda f and Delta = I - A, we get f - Af = lambda f
+    -- So (1 - lambda) f = Af
+    -- The issue is that without l^2 theory, we can't properly define operator norms
+    -- or inner products for arbitrary f : G → ℝ
+    -- This theorem as stated is not provable without additional assumptions
+    -- (e.g., f ∈ l^2(G) or f has finite support)
+    sorry
 
 omit [DecidableEq G] in
 /-- Characterization: f is harmonic iff f is in the kernel of the Laplacian. -/

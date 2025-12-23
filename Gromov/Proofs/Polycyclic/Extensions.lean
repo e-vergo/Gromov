@@ -86,7 +86,62 @@ theorem polycyclicSeries_comap (N : Subgroup G) [N.Normal] (hQ : IsPolycyclic (G
   -- 3. H_0 = comap π ⊤ = ⊤
   -- 4. H_m = comap π ⊥ = N (kernel of quotient map)
   -- 5. Quotients are preserved: H_i/H_{i+1} ≅ Q_i/Q_{i+1} (by first isomorphism theorem)
-  sorry
+  obtain ⟨m, Q, hQ_top, hQ_bot, hQ_le, hQ_norm, hQ_cyc⟩ := hQ
+  refine ⟨m, fun i => (Q i).comap (QuotientGroup.mk' N), ?_, ?_, ?_, ?_, ?_⟩
+  · -- H 0 = comap ⊤ = ⊤
+    simp only [hQ_top, Subgroup.comap_top]
+  · -- H m = comap ⊥ = N (kernel of quotient map)
+    simp only [hQ_bot, MonoidHom.comap_bot, QuotientGroup.ker_mk']
+  · -- Monotonicity
+    intro i
+    exact Subgroup.comap_mono (hQ_le i)
+  · -- Normality
+    intro i
+    constructor
+    intro x hx g
+    simp only [Subgroup.mem_subgroupOf, Subgroup.mem_comap] at hx ⊢
+    have hg_mem : QuotientGroup.mk' N g.val ∈ Q i.castSucc := by
+      have := g.2; simp only [Subgroup.mem_comap] at this; exact this
+    have hx_succ : QuotientGroup.mk' N x ∈ Q i.succ := hx
+    have hx_cast : QuotientGroup.mk' N x ∈ Q i.castSucc := hQ_le i hx_succ
+    have hconj := (hQ_norm i).conj_mem
+      ⟨QuotientGroup.mk' N x, hx_cast⟩
+      (by rw [Subgroup.mem_subgroupOf]; exact hx_succ)
+      ⟨QuotientGroup.mk' N g.val, hg_mem⟩
+    simp only [Subgroup.mem_subgroupOf] at hconj
+    simp only [Subgroup.coe_mul, Subgroup.coe_inv] at hconj
+    exact hconj
+  · -- Cyclic quotients
+    intro i h1 h2
+    unfold QuotientIsCyclic
+    have hQ_cyc_i := hQ_cyc i (hQ_le i) (hQ_norm i)
+    unfold QuotientIsCyclic at hQ_cyc_i
+    obtain ⟨gen, hgen⟩ := hQ_cyc_i
+    obtain ⟨g, hg⟩ := QuotientGroup.mk'_surjective N gen.val
+    have hg_mem : g ∈ (Q i.castSucc).comap (QuotientGroup.mk' N) := by
+      rw [Subgroup.mem_comap, hg]; exact gen.2
+    refine ⟨⟨g, hg_mem⟩, ?_⟩
+    rw [Subgroup.eq_top_iff']
+    intro q
+    induction q using QuotientGroup.induction_on with
+    | H k =>
+      have hk_mem := k.2
+      simp only [Subgroup.mem_comap] at hk_mem
+      have hk_gen : QuotientGroup.mk (s := (Q i.succ).subgroupOf (Q i.castSucc))
+          ⟨QuotientGroup.mk' N k, hk_mem⟩ ∈
+          Subgroup.zpowers (QuotientGroup.mk gen) := by
+        rw [hgen]; exact Subgroup.mem_top _
+      rw [Subgroup.mem_zpowers_iff] at hk_gen ⊢
+      obtain ⟨n, hn⟩ := hk_gen
+      use n
+      apply QuotientGroup.eq.mpr
+      simp only [Subgroup.mem_subgroupOf, Subgroup.mem_comap]
+      have hn' := QuotientGroup.eq.mp hn
+      simp only [Subgroup.mem_subgroupOf, Subgroup.coe_mul, Subgroup.coe_inv,
+        SubgroupClass.coe_zpow] at hn'
+      simp only [Subgroup.coe_mul, Subgroup.coe_inv, SubgroupClass.coe_zpow, map_mul,
+        map_inv, map_zpow, hg]
+      exact hn'
 
 /-! ### Concatenating Polycyclic Series -/
 
@@ -122,14 +177,80 @@ theorem polycyclicSeries_concat (N : Subgroup G) [N.Normal]
       QuotientIsCyclic (H2 i.succ) (H2 i.castSucc) h1 h2) :
     IsPolycyclic G := by
   -- Proof strategy:
-  -- 1. Define the concatenated series of length m + k
-  --    For i < m: use H1 i
-  --    For i ≥ m: use (H2 (i - m)).map N.subtype
-  -- 2. Check the boundary: H1 m = N corresponds to H2 0 = ⊤
-  -- 3. The last term H2 k = ⊥ maps to ⊥ in G
-  -- 4. Quotients in the first part come from H1
-  -- 5. Quotients in the second part come from H2 (under the isomorphism)
-  sorry
+  -- The H1 series gives a polycyclic series for G ending at N (not for G/N)
+  -- The H2 series gives a polycyclic series for N
+  -- To apply isPolycyclic_of_extension, we need series for N (which we have)
+  -- and for G/N (which we construct by mapping H1 through quotient)
+  have hN_poly : IsPolycyclic N := ⟨k, H2, hH2_top, hH2_bot, hH2_le, hH2_normal, hH2_cyclic⟩
+  -- Map H1 series to G/N to get a series for G/N
+  let Q : Fin (m + 1) → Subgroup (G ⧸ N) := fun i => (H1 i).map (QuotientGroup.mk' N)
+  -- Build a polycyclic series for G/N
+  have hQ_poly : IsPolycyclic (G ⧸ N) := by
+    refine ⟨m, Q, ?_, ?_, ?_, ?_, ?_⟩
+    · -- Q 0 = map ⊤ = ⊤
+      simp only [Q, hH1_top]
+      exact Subgroup.map_top_of_surjective (QuotientGroup.mk' N) (QuotientGroup.mk'_surjective N)
+    · -- Q m = map N = ⊥ (since ker(mk) = N)
+      simp only [Q, hH1_N]
+      ext x
+      simp only [Subgroup.mem_map, Subgroup.mem_bot]
+      constructor
+      · intro ⟨g, hg, hgx⟩
+        rw [← hgx, QuotientGroup.mk'_apply, QuotientGroup.eq_one_iff]
+        exact hg
+      · intro hx
+        rw [hx]
+        exact ⟨1, N.one_mem, map_one _⟩
+    · -- Monotonicity
+      intro i
+      exact Subgroup.map_mono (hH1_le i)
+    · -- Normality
+      intro i
+      constructor
+      intro x hx g
+      simp only [Subgroup.mem_subgroupOf] at hx ⊢
+      rw [Subgroup.mem_map] at hx ⊢
+      obtain ⟨x', hx'_mem, hx'_eq⟩ := hx
+      have hg_mem := g.2
+      rw [Subgroup.mem_map] at hg_mem
+      obtain ⟨g', hg'_mem, hg'_eq⟩ := hg_mem
+      refine ⟨g' * x' * g'⁻¹, ?_, ?_⟩
+      · have hx'_cast : x' ∈ H1 i.castSucc := hH1_le i hx'_mem
+        have hx'_sub : ⟨x', hx'_cast⟩ ∈ (H1 i.succ).subgroupOf (H1 i.castSucc) := by
+          rw [Subgroup.mem_subgroupOf]; exact hx'_mem
+        have := (hH1_normal i).conj_mem ⟨x', hx'_cast⟩ hx'_sub ⟨g', hg'_mem⟩
+        rw [Subgroup.mem_subgroupOf] at this
+        convert this using 1
+      · simp only [map_mul, map_inv, hx'_eq, hg'_eq, Subgroup.coe_mul, Subgroup.coe_inv]
+    · -- Cyclic quotients
+      intro i h1 h2
+      have hCyc := hH1_cyclic i (hH1_le i) (hH1_normal i)
+      unfold QuotientIsCyclic at hCyc ⊢
+      obtain ⟨gen, hgen⟩ := hCyc
+      use ⟨QuotientGroup.mk' N gen, Subgroup.mem_map_of_mem _ gen.2⟩
+      rw [Subgroup.eq_top_iff']
+      intro q
+      induction q using QuotientGroup.induction_on with
+      | H x =>
+        have hx_mem := x.2
+        rw [Subgroup.mem_map] at hx_mem
+        obtain ⟨x', hx'_mem, hx'_eq⟩ := hx_mem
+        have hx'_gen : QuotientGroup.mk (s := (H1 i.succ).subgroupOf (H1 i.castSucc))
+            ⟨x', hx'_mem⟩ ∈ Subgroup.zpowers (QuotientGroup.mk gen) := by
+          rw [hgen]; exact Subgroup.mem_top _
+        rw [Subgroup.mem_zpowers_iff] at hx'_gen ⊢
+        obtain ⟨n, hn⟩ := hx'_gen
+        use n
+        apply QuotientGroup.eq.mpr
+        simp only [Subgroup.mem_subgroupOf]
+        rw [Subgroup.mem_map]
+        have hn' := QuotientGroup.eq.mp hn
+        simp only [Subgroup.mem_subgroupOf] at hn'
+        refine ⟨(gen.val ^ n)⁻¹ * x', hn', ?_⟩
+        simp only [map_mul, map_inv, map_zpow, Subgroup.coe_mul, Subgroup.coe_inv,
+          SubgroupClass.coe_zpow, hx'_eq]
+  -- Now use the extension theorem
+  exact isPolycyclic_of_extension N hN_poly hQ_poly
 
 /-! ### Extension Theorem -/
 
@@ -153,7 +274,7 @@ theorem isPolycyclic_of_extension' (N : Subgroup G) [N.Normal]
   -- 3. Get polycyclic series for N: N = N_0 > N_1 > ... > N_k = 1
   -- 4. Concatenate the two series (via polycyclicSeries_concat)
   -- 5. Result: G = H_0 > ... > H_m = N = N_0 > ... > N_k = 1
-  sorry
+  exact isPolycyclic_of_extension N hN hQ
 
 /-! ### Finite Index Subgroups -/
 
@@ -173,19 +294,8 @@ References:
 - Segal, D. "Polycyclic Groups" (1983), Proposition 1.6
 -/
 theorem isPolycyclic_of_finiteIndex_polycyclic' (H : Subgroup G) [H.FiniteIndex]
-    (hH : IsPolycyclic H) : IsPolycyclic G := by
-  -- Proof strategy (detailed):
-  -- 1. Take K = H.normalCore (the largest normal subgroup of G contained in H)
-  -- 2. K = ⋂_{g ∈ G/H} gHg^{-1}, a finite intersection since [G:H] < ∞
-  -- 3. K ≤ H, so K is polycyclic (subgroups of polycyclic are polycyclic)
-  -- 4. K ⊴ G by definition of normal core
-  -- 5. [G : K] ≤ [G : H]! < ∞, so G/K is finite
-  -- 6. Polycyclic groups are solvable, so H is solvable
-  -- 7. K ≤ H solvable and [H : K] < ∞, so K is solvable
-  -- 8. G/K ≅ G/K is finite, and G is solvable (finite extension of solvable K)
-  -- 9. G/K is finite solvable, hence polycyclic (isPolycyclic_of_finite)
-  -- 10. Apply isPolycyclic_of_extension with N = K
-  sorry
+    (hH : IsPolycyclic H) : IsPolycyclic G :=
+  isPolycyclic_of_finiteIndex_polycyclic H hH
 
 /-- The normal core of a polycyclic subgroup is polycyclic.
 
@@ -200,7 +310,7 @@ theorem normalCore_polycyclic (H : Subgroup G) (hH : IsPolycyclic H) :
   -- 1. H.normalCore ≤ H (by definition)
   -- 2. Subgroups of polycyclic groups are polycyclic (isPolycyclic_subgroup)
   -- 3. Therefore H.normalCore is polycyclic
-  sorry
+  exact isPolycyclic_of_le (Subgroup.normalCore_le H) hH
 
 /-! ### Additional Series Manipulation Lemmas -/
 
@@ -229,7 +339,8 @@ theorem polycyclicSeries_inf (hG : IsPolycyclic G) (H : Subgroup G) :
   -- 4. K_n = H ⊓ 1 = 1 (in H, this is ⊥)
   -- 5. Each quotient (H ⊓ G_i)/(H ⊓ G_{i+1}) embeds into G_i/G_{i+1}
   -- 6. Subgroups of cyclic groups are cyclic
-  sorry
+  have hH_poly : IsPolycyclic H := isPolycyclic_subgroup hG H
+  exact hH_poly
 
 /-- The length of a polycyclic series (Hirsch length) is an invariant.
 

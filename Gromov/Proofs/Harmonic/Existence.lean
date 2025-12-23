@@ -47,10 +47,13 @@ theorem cesaro_asymptotically_harmonic (hS_nonempty : S.Nonempty) (f : G → ℝ
     (support : Finset G) (hf : ∀ x, x ∉ support → f x = 0) :
     ∀ ε > 0, ∃ N : ℕ, ∀ n ≥ N,
       HarmonicDefect S (CesaroAverage S n f) support ≤ ε := by
-  -- Proof sketch: The Cesaro average satisfies
-  -- f_n - A(f_n) = (1/n) * (f - mu^{*n} * f)
-  -- where f - mu^{*n} * f is bounded (since f has finite support).
-  -- Thus the defect is O(1/n) -> 0.
+  -- Proof outline:
+  -- 1. Expand CesaroAverage: f_n(x) = (1/n) ∑_{m=1}^n (mu^{*m} * f)(x)
+  -- 2. The harmonic defect satisfies: Δf_n = (1/n)(f - mu^{*n} * f)
+  -- 3. Since f has finite support, |f - mu^{*n} * f| is uniformly bounded by 2||f||_∞
+  -- 4. Therefore ||Δf_n||_{L^1} ≤ C/n for some constant C depending on support size
+  -- 5. Choose N = ⌈C/ε⌉
+  -- Missing infrastructure: properties of convolution powers, bounds on Markov operator
   sorry
 
 omit [DecidableEq G] in
@@ -58,8 +61,13 @@ omit [DecidableEq G] in
 theorem cesaro_preserves_lipschitz {L : ℝ} (hL : 0 ≤ L) (n : ℕ) (f : G → ℝ)
     (hf : IsWordLipschitz S L f) :
     IsWordLipschitz S L (CesaroAverage S n f) := by
-  -- Proof sketch: Convolution with probability measure is a contraction for Lipschitz.
-  -- Cesaro average is a convex combination, so it preserves Lipschitz constant.
+  -- Proof outline:
+  -- 1. Show MarkovPower m preserves Lipschitz: the averaging operator is a contraction
+  --    |Af(x) - Af(y)| = |(1/|S|) ∑_s (f(xs) - f(ys))| ≤ (1/|S|) ∑_s |f(xs) - f(ys)|
+  --                     ≤ (1/|S|) ∑_s L·d(xs, ys) ≤ L·d(x,y)
+  -- 2. CesaroAverage is convex combination: (1/n) ∑_m ConvolutionPower m f
+  -- 3. Convex combinations preserve Lipschitz bounds
+  -- Missing infrastructure: formalization of operator properties, convex combination lemmas
   sorry
 
 end CesaroAverages
@@ -80,9 +88,15 @@ omit [DecidableEq G] in
 theorem nonamenable_has_bounded_harmonic (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
     (hS_gen : Subgroup.closure S = ⊤) (hGap : SpectralGap S > 0) :
     ∃ (f : G → ℝ), IsHarmonicSymmetric S f ∧ (∃ M, ∀ x, |f x| ≤ M) ∧ ¬(∃ c, f = fun _ => c) := by
-  -- Proof sketch: Positive spectral gap means the Laplacian is invertible on
-  -- orthogonal complement of constants. The inverse applied to any non-constant
-  -- function gives a bounded harmonic function.
+  -- Proof outline:
+  -- 1. Spectral gap λ > 0 means: ⟨Δf, f⟩ ≥ λ⟨f, f⟩ for all f ⊥ constants
+  -- 2. This implies Δ is invertible on the orthogonal complement of constants
+  -- 3. Take any non-constant f₀ ∈ l²(G) with f₀ ⊥ constants
+  -- 4. Set f = Δ⁻¹f₀, which satisfies Δf = f₀
+  -- 5. By spectral theory, ||f||₂ ≤ (1/λ)||f₀||₂, so f ∈ l²(G)
+  -- 6. Since G is non-amenable, l²(G) functions can be bounded
+  -- Missing infrastructure: l²(G) inner product space structure, spectral theorem,
+  -- inverse operator on spectral complement
   sorry
 
 omit [DecidableEq G] in
@@ -93,9 +107,13 @@ theorem amenable_spectral_projection (hS : Gromov.IsSymmetric S) (hS_nonempty : 
     (hS_gen : Subgroup.closure S = ⊤) (hGap : SpectralGap S = 0) :
     ∀ ε > 0, ∃ (f : G → ℝ), (∃ x, f x ≠ 0) ∧
       ∀ x, |DiscreteLaplacian S f x| ≤ ε * |f x| := by
-  -- Proof sketch: Since spectral gap is 0, for any epsilon there exists
-  -- an approximate eigenfunction with eigenvalue < epsilon.
-  -- This gives almost-harmonic functions.
+  -- Proof outline:
+  -- 1. Spectral gap = 0 means: inf{⟨Δf, f⟩/⟨f, f⟩ : f ⊥ constants} = 0
+  -- 2. For any ε > 0, there exists f ⊥ constants with ⟨Δf, f⟩ < ε⟨f, f⟩
+  -- 3. This means ||Δf||₂ ≤ ε||f||₂ (approximately an eigenfunction for eigenvalue ~0)
+  -- 4. By Cauchy-Schwarz and l² theory, this implies pointwise bound |Δf(x)| ≤ ε|f(x)|
+  -- Missing infrastructure: spectral gap characterization, variational formulation,
+  -- approximate eigenfunctions
   sorry
 
 omit [DecidableEq G] in
@@ -106,13 +124,17 @@ omit [DecidableEq G] in
 theorem lipschitz_harmonic_exists (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Nonempty)
     (hS_gen : Subgroup.closure S = ⊤) (hpoly : HasPolynomialGrowth G) (hInf : Infinite G) :
     ∃ (f : G → ℝ) (L : ℝ), L > 0 ∧ IsHarmonicSymmetric S f ∧ IsWordLipschitz S L f := by
-  -- Proof sketch:
-  -- 1. Start with any Lipschitz function f_0 (e.g., word length function).
-  -- 2. Take Cesaro averages f_n to get asymptotically harmonic functions.
-  -- 3. The f_n are uniformly Lipschitz, so by Arzela-Ascoli a subsequence
-  --    converges locally uniformly.
-  -- 4. The limit is harmonic (by continuity of Laplacian) and Lipschitz.
-  -- 5. Polynomial growth ensures the limit is non-trivial.
+  -- Proof outline:
+  -- 1. Start with the word length function f₀(g) = wordLength S g, which is 1-Lipschitz
+  -- 2. Form Cesaro averages: f_n = CesaroAverage S n f₀
+  -- 3. By cesaro_preserves_lipschitz, each f_n is 1-Lipschitz
+  -- 4. The sequence {f_n} is uniformly bounded on balls (by Lipschitz property)
+  -- 5. Apply Arzela-Ascoli: extract a locally uniformly convergent subsequence f_{n_k} → f
+  -- 6. The limit f is Lipschitz (uniform limit of Lipschitz functions)
+  -- 7. The limit f is harmonic (Laplacian is continuous, defect → 0 by cesaro_asymptotic)
+  -- 8. Polynomial growth ensures f is non-trivial (growth bounds prevent collapse to constant)
+  -- Missing infrastructure: Arzela-Ascoli theorem for metric spaces, locally uniform convergence,
+  -- continuity of discrete Laplacian, polynomial growth implications
   sorry
 
 omit [DecidableEq G] in
@@ -122,11 +144,17 @@ theorem lipschitz_harmonic_nonconstant (hS : Gromov.IsSymmetric S) (hS_nonempty 
     (hS_gen : Subgroup.closure S = ⊤) (hpoly : HasPolynomialGrowth G) (hInf : Infinite G) :
     ∃ (f : G → ℝ) (L : ℝ), L > 0 ∧ IsHarmonicSymmetric S f ∧ IsWordLipschitz S L f ∧
       ¬(∃ c, f = fun _ => c) := by
-  -- Proof sketch: Start with a non-constant function (e.g., indicator of a half-space
-  -- or the word length function). The Cesaro averaging process preserves non-constancy
-  -- for infinite groups with polynomial growth because:
-  -- - If all limits were constant, the original function would have bounded variation
-  -- - But polynomial growth groups have unbounded diameter
+  -- Proof outline:
+  -- 1. Use lipschitz_harmonic_exists to get (f, L) with f harmonic and L-Lipschitz
+  -- 2. Need to show f is non-constant
+  -- 3. Key observation: if f were constant c, then f₀ (word length) would have
+  --    Cesaro averages converging to c
+  -- 4. But word length grows linearly along any infinite geodesic ray
+  -- 5. Polynomial growth implies existence of such rays
+  -- 6. The Cesaro averages of word length along a ray grow unboundedly
+  -- 7. Therefore the limit cannot be constant
+  -- Missing infrastructure: properties of word length on infinite groups,
+  -- geodesic rays, growth along rays
   sorry
 
 end ExistenceTheorems
@@ -153,9 +181,16 @@ theorem harmonic_gradient_bound (hS : Gromov.IsSymmetric S) (hS_nonempty : S.Non
     (f : G → ℝ) (hf : IsHarmonicSymmetric S f) (x : G) (R : ℕ) (hR : R > 0) :
     DiscreteGradient S f x ≤
       (2 / R : ℝ) * ⨆ g ∈ CayleyBall S R, |f (x * g)| := by
-  -- Proof sketch: The harmonic condition f(x) = average over neighbors can be
-  -- iterated to get f(x) = average over R-ball. Then gradient is bounded by
-  -- oscillation over R-ball divided by R.
+  -- Proof outline:
+  -- 1. Iterate the harmonic condition R times: f(x) = (MarkovPower R)(f)(x)
+  --    This expresses f(x) as average over all R-step random walks from x
+  -- 2. For each neighbor x*s, similarly f(x*s) = (MarkovPower R)(f)(x*s)
+  -- 3. Subtract: |f(x*s) - f(x)| = |avg over R-ball from x*s - avg over R-ball from x|
+  -- 4. The R-balls from x and x*s have large overlap (shifted by distance 1)
+  -- 5. The difference is bounded by (constant/R) × sup oscillation over combined R+1 ball
+  -- 6. Taking supremum over s ∈ S gives the gradient bound
+  -- Missing infrastructure: iteration of Markov operator, balls overlap estimates,
+  -- quantitative averaging arguments
   sorry
 
 omit [DecidableEq G] in
@@ -261,10 +296,20 @@ theorem harmonic_constant_on_coset (hS : Gromov.IsSymmetric S) (hS_nonempty : S.
     (hS_gen : Subgroup.closure S = ⊤) (f : G → ℝ) (hf : IsHarmonicSymmetric S f)
     (H : Subgroup G) [H.FiniteIndex] (c : ℝ) (hc : ∀ h : H, f h.val = c) :
     ∀ g : G, f g = c := by
-  -- Proof sketch: Since H has finite index, any element g is at bounded distance
-  -- from some h in H. By the maximum principle argument applied to |f - c|,
-  -- if f = c on H then f = c everywhere.
-  sorry
+  -- Apply maximum principle directly
+  -- Since f is constant on H, f x = c for all x ∈ H, in particular f(1) = c
+  have f_one : f 1 = c := hc ⟨1, H.one_mem⟩
+  -- Since S generates G and f is harmonic, use maximum principle
+  -- f must be constant if it equals its supremum at 1
+  -- We show f x = f 1 for all x, which gives f x = c
+  have h_const : ∀ x : G, f x = f 1 := by
+    -- To use maximum principle, we need to show f attains its max at 1
+    -- But we don't have that f 1 is the maximum...
+    -- Instead, we use that f is constant on the identity coset of H
+    -- Let's use a different approach: show f cannot vary from c
+    sorry
+  intro g
+  rw [h_const g, f_one]
 
 end MaximumPrinciple
 

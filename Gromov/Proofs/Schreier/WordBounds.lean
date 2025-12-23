@@ -63,7 +63,27 @@ This is a key ingredient: we need coset reps to have controlled complexity. -/
 theorem cosetRep_wordLength_bound [H.FiniteIndex] (S : Set G) (hS : closure S = ⊤)
     (R : Finset G) (hR : IsCosetRepSet H (R : Set G)) (hR1 : (1 : G) ∈ R) :
     ∃ C : ℕ, ∀ r ∈ R, r ∈ CayleyBall S (C * H.index) := by
-  sorry
+  -- Each r in R has some word length in S, we take max and multiply by index
+  have hex : ∀ r ∈ R, ∃ n, r ∈ CayleyBall S n := fun r _ =>
+    exists_cayleyBall_mem_of_closure_eq_top hS r
+  choose n hn using hex
+  -- Take max over all word lengths in R
+  let max_n := R.attach.sup (fun r => n r.1 r.2) + 1
+  use max_n
+  intro r hr
+  have hle : n r hr ≤ R.attach.sup (fun r => n r.1 r.2) := by
+    have : (⟨r, hr⟩ : {x // x ∈ R}) ∈ R.attach := Finset.mem_attach _ _
+    exact Finset.le_sup (f := fun r => n r.1 r.2) this
+  have hmem : r ∈ CayleyBall S (n r hr) := hn r hr
+  have hbound : n r hr ≤ max_n * H.index := by
+    calc n r hr ≤ R.attach.sup (fun r => n r.1 r.2) := hle
+      _ ≤ R.attach.sup (fun r => n r.1 r.2) + 1 := Nat.le_succ _
+      _ = max_n := rfl
+      _ = max_n * 1 := (Nat.mul_one _).symm
+      _ ≤ max_n * H.index := Nat.mul_le_mul_left _ (by
+        -- index is at least 1 for any subgroup
+        exact Nat.one_le_iff_ne_zero.mpr Subgroup.index_ne_zero_of_finite)
+  exact cayleyBall_monotone S hbound hmem
 
 /-- A more refined bound: coset representatives can be chosen with word length at most
 H.index - 1, by taking shortest paths in the Schreier graph. -/
@@ -72,6 +92,9 @@ H.index - 1, by taking shortest paths in the Schreier graph. -/
 theorem cosetRep_wordLength_bound_sharp [H.FiniteIndex] (S : Set G) (hS : closure S = ⊤)
     (R : Finset G) (hR : IsCosetRepSet H (R : Set G)) (hR1 : (1 : G) ∈ R) :
     ∀ r ∈ R, r ∈ CayleyBall S (H.index - 1) := by
+  -- This requires a graph-theoretic argument about shortest paths in the quotient graph.
+  -- For now, we use the weaker bound from cosetRep_wordLength_bound
+  -- The sharp bound requires showing the Schreier graph is connected with diameter ≤ index - 1
   sorry
 
 /-! ### Word Length for Schreier Generators -/
@@ -94,9 +117,55 @@ theorem schreierGenerator_wordLength_bound [H.FiniteIndex]
     (M : ℕ) (hM : ∀ s ∈ S, s ∈ CayleyBall S M)
     (x : H) (hx : x ∈ schreierGenerators H S (R : Set G) hR) :
     (x : G) ∈ CayleyBall S (2 * L + M) := by
-  sorry
+  -- x is a Schreier generator, so x = g * (bar(g))^{-1} for some g ∈ R * S
+  -- where g = r * s for r ∈ R and s ∈ S
+  simp only [schreierGenerators, Set.mem_image] at hx
+  obtain ⟨g, hg_in_RS, hx_eq⟩ := hx
+  simp only [Set.mem_mul] at hg_in_RS
+  obtain ⟨r, hr, s, hs, hg_eq⟩ := hg_in_RS
+  -- Now x = (r * s) * (bar(r*s))^{-1}
+  -- We have |r| ≤ L, |s| ≤ M, |bar(r*s)| ≤ L (since bar(r*s) ∈ R)
+  have hr_ball : r ∈ CayleyBall S L := hL r hr
+  have hs_ball : s ∈ CayleyBall S M := hM s hs
+  -- bar(r*s) = hR.toRightFun g, and since g = r*s we work with r*s directly
+  have hrs : r * s ∈ CayleyBall S (L + M) := cayleyBall_mul S hr_ball hs_ball
+  -- Rewrite g as r * s in the coset rep function
+  have hbar_in_R : (hR.toRightFun (r * s) : G) ∈ (R : Set G) := by
+    rw [hg_eq]
+    exact Subtype.coe_prop (hR.toRightFun g)
+  have hbar_ball : (hR.toRightFun (r * s) : G) ∈ CayleyBall S L := hL _ hbar_in_R
+  have hbarinv : (hR.toRightFun (r * s) : G)⁻¹ ∈ CayleyBall S L := cayleyBall_inv S hbar_ball
+  -- Now use triangle inequality
+  have hprod : (r * s) * (hR.toRightFun (r * s) : G)⁻¹ ∈ CayleyBall S (L + M + L) :=
+    cayleyBall_mul S hrs hbarinv
+  -- Simplify: L + M + L = 2*L + M
+  have heq : L + M + L = 2 * L + M := by ring
+  rw [heq] at hprod
+  -- Show that x coerced to G equals this product
+  have : (x : G) = (r * s) * (hR.toRightFun (r * s) : G)⁻¹ := by
+    have : x = ⟨g * (hR.toRightFun g : G)⁻¹, hR.mul_inv_toRightFun_mem g⟩ := hx_eq.symm
+    simp only [← hg_eq] at this
+    exact congrArg Subtype.val this
+  rw [this]
+  exact hprod
 
 /-! ### Main Schreier Rewriting Bound -/
+
+/-- Auxiliary lemma for Schreier rewriting: the word length bound holds step by step.
+
+This is a helper for proving the main bound by induction on word length. -/
+-- Proof: By induction on the word length.
+-- Base case: k = 0 means h = 1, which has Schreier word length 0.
+-- Inductive case: If h = h' * s where h' has word length k-1 and s ∈ S_G:
+--   Case s ∈ S_H: h has Schreier word length ≤ (h'.length) + 1
+--   Case s ∈ reps: Need to apply Schreier rewriting, adding at most index steps.
+theorem schreier_rewrite_bound_aux [H.FiniteIndex]
+    (S_H : Set H) (hS_H_gen : closure S_H = ⊤)
+    (reps : Finset G) (hreps : ∀ q : G ⧸ H, Quotient.out q ∈ reps)
+    (S_G : Set G) (hS_G : S_G = Subtype.val '' S_H ∪ ↑reps)
+    (k : ℕ) (h : G) (hh_mem : h ∈ H) (hh_ball : h ∈ CayleyBall S_G k) :
+    ⟨h, hh_mem⟩ ∈ CayleyBall S_H ((H.index + 1) * k) := by
+  sorry
 
 /-- **Main Schreier Rewriting Bound**: If h ∈ H can be written as a word of length k
 in generators S_G = S_H ∪ coset_reps, then h can be written as a word of length
@@ -125,23 +194,8 @@ theorem wordLength_in_subgroup_via_schreier [H.FiniteIndex]
     (S_G : Set G) (hS_G : S_G = Subtype.val '' S_H ∪ ↑reps)
     (k : ℕ) (h : H) (hh_ball : (h : G) ∈ CayleyBall S_G k) :
     h ∈ CayleyBall S_H ((H.index + 1) * k) := by
-  sorry
-
-/-- Auxiliary lemma for Schreier rewriting: the word length bound holds step by step.
-
-This is a helper for proving the main bound by induction on word length. -/
--- Proof: By induction on the word length.
--- Base case: k = 0 means h = 1, which has Schreier word length 0.
--- Inductive case: If h = h' * s where h' has word length k-1 and s ∈ S_G:
---   Case s ∈ S_H: h has Schreier word length ≤ (h'.length) + 1
---   Case s ∈ reps: Need to apply Schreier rewriting, adding at most index steps.
-theorem schreier_rewrite_bound_aux [H.FiniteIndex]
-    (S_H : Set H) (hS_H_gen : closure S_H = ⊤)
-    (reps : Finset G) (hreps : ∀ q : G ⧸ H, Quotient.out q ∈ reps)
-    (S_G : Set G) (hS_G : S_G = Subtype.val '' S_H ∪ ↑reps)
-    (k : ℕ) (h : G) (hh_mem : h ∈ H) (hh_ball : h ∈ CayleyBall S_G k) :
-    ⟨h, hh_mem⟩ ∈ CayleyBall S_H ((H.index + 1) * k) := by
-  sorry
+  -- Use the auxiliary theorem
+  exact schreier_rewrite_bound_aux S_H hS_H_gen reps hreps S_G hS_G k (h : G) h.2 hh_ball
 
 /-! ### Cayley Ball Bounds in Subgroups -/
 
@@ -159,7 +213,22 @@ theorem cayleyBall_subgroup_bound [H.FiniteIndex]
     (hS_compat : Subtype.val '' S_H ⊆ S_G)
     (n : ℕ) :
     (CayleyBall S_H n).ncard ≤ (CayleyBall S_G ((H.index + 1) * n)).ncard := by
-  sorry
+  -- The subtype embedding gives an injection from CayleyBall S_H n to CayleyBall S_G (c*n)
+  -- where c depends on the index
+  -- Use that Subtype.val maps CayleyBall S_H n into CayleyBall S_G (c*n)
+  haveI : Fintype S_H := Fintype.ofFinite S_H
+  haveI : Fintype S_G := Fintype.ofFinite S_G
+  have h_image_subset :
+      (Subtype.val : H → G) '' CayleyBall S_H n ⊆
+        CayleyBall S_G ((H.index + 1) * n) := by
+    intro g hg
+    obtain ⟨h, hh, rfl⟩ := hg
+    sorry  -- This requires the Schreier rewriting bound
+  calc (CayleyBall S_H n).ncard
+      = ((Subtype.val : H → G) '' CayleyBall S_H n).ncard :=
+        (Set.ncard_image_of_injective _ Subtype.val_injective).symm
+    _ ≤ (CayleyBall S_G ((H.index + 1) * n)).ncard :=
+        Set.ncard_le_ncard h_image_subset (cayleyBall_finite (Set.toFinite S_G) _)
 
 /-- The growth rate of a finite-index subgroup is related to the growth rate of the ambient group.
 
@@ -170,7 +239,7 @@ of degree at most d. This follows from the Cayley ball bounds. -/
 -- So H has polynomial growth of degree at most d.
 theorem polynomial_growth_of_finiteIndex [H.FiniteIndex]
     (hG : HasPolynomialGrowth G) : HasPolynomialGrowth H := by
-  sorry
+  exact hasPolynomialGrowth_of_finiteIndex_subgroup H ‹H.FiniteIndex› hG
 
 /-- Converse direction: if a finite-index subgroup has polynomial growth, so does the group.
 
@@ -181,7 +250,27 @@ This uses that G is covered by finitely many H-cosets, each a translate of H. -/
 -- If H has polynomial growth, this gives polynomial growth for G.
 theorem polynomial_growth_of_subgroup_finiteIndex [H.FiniteIndex]
     (hH : HasPolynomialGrowth H) : HasPolynomialGrowth G := by
-  sorry
+  -- Get polynomial bound for H
+  obtain ⟨S_H, hS_H_fin, hS_H_gen, C_H, d, hC_H_pos, hH_bound⟩ := hH
+  -- Get coset representatives for H in G
+  classical
+  have hfin : (Set.univ : Set (G ⧸ H)).Finite := by
+    haveI : Fintype (G ⧸ H) := Fintype.ofFinite (G ⧸ H)
+    exact Set.finite_univ
+  let reps := hfin.toFinset.image Quotient.out
+  -- Define generating set for G as S_H plus coset reps
+  let S_G := Subtype.val '' S_H ∪ (reps : Set G)
+  use S_G
+  constructor
+  · -- S_G is finite
+    apply Set.Finite.union
+    · exact hS_H_fin.image Subtype.val
+    · exact Finset.finite_toSet _
+  constructor
+  · -- S_G generates G
+    sorry  -- This requires showing S_H ∪ reps generates G
+  · -- S_G has polynomial growth
+    sorry  -- This requires bounding |B_G(n)| using |B_H(n)|
 
 end
 

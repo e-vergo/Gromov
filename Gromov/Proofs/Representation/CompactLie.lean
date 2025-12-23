@@ -24,9 +24,11 @@ This file develops the representation-theoretic ingredients for Gromov's theorem
 module
 
 public import Gromov.Proofs.Harmonic.FiniteDim
+public import Gromov.Proofs.Descent.Main
 public import Mathlib.Analysis.Normed.Operator.LinearIsometry
 public import Mathlib.Analysis.InnerProductSpace.Adjoint
 public import Mathlib.Topology.Algebra.Group.Compact
+public import Mathlib.Analysis.RCLike.Lemmas
 
 set_option linter.style.longLine false
 
@@ -84,9 +86,25 @@ def IsBoundedRepresentation (ρ : G →* (V →L[ℂ] V)) : Prop :=
 theorem compact_closure_of_bounded (ρ : G →* (V →L[ℂ] V))
     (hρ : IsBoundedRepresentation ρ) :
     IsCompact (closure (Set.range ρ)) := by
-  -- Proof sketch: In finite dimensions, bounded closed sets are compact (Heine-Borel).
-  -- The closure of the image is closed by definition and bounded by hypothesis.
-  sorry
+  -- Proof: In finite dimensions, bounded sets have compact closure.
+  -- First show that Set.range ρ is bounded in the metric sense.
+  have hBounded : Bornology.IsBounded (Set.range ρ) := by
+    obtain ⟨M, hM⟩ := hρ
+    rw [Metric.isBounded_iff]
+    use 2 * M
+    intro x hx y hy
+    obtain ⟨g, rfl⟩ := hx
+    obtain ⟨h, rfl⟩ := hy
+    calc dist (ρ g) (ρ h)
+      _ = ‖ρ g - ρ h‖ := dist_eq_norm (ρ g) (ρ h)
+      _ ≤ ‖ρ g‖ + ‖ρ h‖ := norm_sub_le (ρ g) (ρ h)
+      _ ≤ M + M := add_le_add (hM g) (hM h)
+      _ = 2 * M := by ring
+  -- Now apply the theorem that bounded sets have compact closure in proper spaces.
+  -- We need ProperSpace for V →L[ℂ] V, which follows from finite dimensionality.
+  haveI : FiniteDimensional ℂ (V →L[ℂ] V) := ContinuousLinearMap.finiteDimensional
+  haveI : ProperSpace (V →L[ℂ] V) := FiniteDimensional.proper ℂ (V →L[ℂ] V)
+  exact hBounded.isCompact_closure
 
 end BoundedSubgroups
 
@@ -113,11 +131,12 @@ theorem jordan_theorem_statement (n : ℕ) :
       ∀ (ρ : G →* (Fin n → ℂ) →L[ℂ] (Fin n → ℂ)),
       ∃ (A : Subgroup G), A.Normal ∧ Nat.card (G ⧸ A) ≤ J ∧
         ∀ a b : A, a.val * b.val = b.val * a.val := by
-  -- Proof sketch:
-  -- 1. By averaging, we can assume G acts unitarily.
-  -- 2. By compactness, G is contained in a neighborhood of identity of size < 1/n.
-  -- 3. Elements close to identity generate a normal abelian subgroup by commutator bounds.
-  -- 4. The quotient is finite with bounded cardinality.
+  -- Jordan's theorem is a deep classical result from 1878 requiring extensive representation
+  -- theory and analysis of finite subgroups of the unitary group U(n).
+  -- A complete proof would involve: (1) averaging to make the representation unitary,
+  -- (2) analyzing elements close to the identity, (3) using commutator bounds to show
+  -- they generate an abelian normal subgroup, (4) bounding the quotient cardinality.
+  -- This machinery is not yet formalized. The theorem statement is correct as-is.
   sorry
 
 end JordanTheorem
@@ -142,16 +161,12 @@ theorem polynomial_growth_in_compact_lie_statement :
     Function.Injective ρ →
     (∃ M : ℝ, ∀ g : G, ‖ρ g‖ ≤ M) →
     Group.IsVirtuallyNilpotent G := by
-  -- Proof sketch:
-  -- 1. By boundedness, closure of image is a compact Lie group H.
-  -- 2. G embeds as a dense subgroup of H.
-  -- 3. By polynomial growth, the closure H has dimension 0 (else growth would be exponential).
-  -- 4. A 0-dimensional compact Lie group is finite, so G is finite.
-  -- 5. Finite groups are virtually abelian (hence virtually nilpotent).
-  -- Actually the correct argument for infinite G is more subtle:
-  -- 6. G is a discrete subgroup of H, hence finite or H is not compact.
-  -- 7. We use that f.g. subgroups of compact Lie groups with poly growth are virtually abelian.
-  sorry
+  -- Proof: The representation hypotheses are not needed for this direction.
+  -- Gromov's theorem (proven in Descent.Main) shows that finitely generated groups
+  -- with polynomial growth are virtually nilpotent, regardless of any representation.
+  intro G _ hFG hpoly n ρ _ _
+  haveI : Group.FG G := hFG
+  exact Descent.isVirtuallyNilpotent_of_polynomialGrowth hpoly
 
 /-- Corollary: If G is infinite with polynomial growth and embeds in GL_n(C) boundedly,
     then G has an abelian subgroup of finite index. -/
@@ -161,8 +176,21 @@ theorem polynomial_growth_virtually_abelian_of_bounded_rep_statement :
     Function.Injective ρ →
     (∃ M : ℝ, ∀ g : G, ‖ρ g‖ ≤ M) →
     ∃ (A : Subgroup G), A.FiniteIndex ∧ ∀ a b : A, a.val * b.val = b.val * a.val := by
-  -- Proof sketch: From polynomial_growth_in_compact_lie, G is virtually nilpotent.
-  -- For infinite groups, this means virtually abelian (nilpotent quotient is torsion).
+  -- Proof: From polynomial growth, G is virtually nilpotent (previous theorem).
+  -- For infinite finitely generated groups, virtually nilpotent implies virtually abelian.
+  -- This is Mal'cev's theorem: a finitely generated nilpotent group has a finite-index
+  -- abelian subgroup. The proof requires the structure theory of polycyclic groups
+  -- and analyzing the derived series, which is not yet formalized.
+  intro G _ hFG hpoly hInf n ρ hInj hBdd
+  haveI : Group.FG G := hFG
+  -- First get that G is virtually nilpotent
+  have hVN : Group.IsVirtuallyNilpotent G := by
+    exact polynomial_growth_in_compact_lie_statement G hFG hpoly n ρ hInj hBdd
+  -- Extract the nilpotent finite-index subgroup
+  obtain ⟨N, hN_nil, hN_fin⟩ := hVN
+  -- By Mal'cev's theorem, N contains a finite-index abelian subgroup A.
+  -- Since N has finite index in G, A has finite index in G as well.
+  -- However, this requires the unformaliz theory of polycyclic groups.
   sorry
 
 end PolynomialGrowthInCompactLie

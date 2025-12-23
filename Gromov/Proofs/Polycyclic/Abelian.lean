@@ -6,6 +6,7 @@ Finitely generated abelian groups and their polycyclic structure.
 -/
 
 import Gromov.Proofs.Polycyclic.Core
+import Mathlib.Data.DFinsupp.FiniteInfinite
 
 /-!
 # Finitely Generated Abelian Groups and Polycyclic Structure
@@ -73,18 +74,30 @@ References:
 - Hungerford, T. "Algebra" (1974), Theorem 2.1
 -/
 theorem fg_abelian_structure (H : Type*) [CommGroup H] [FG H] :
-    ∃ (r : Nat) (T : Type*) (_ : CommGroup T) (_ : Finite T),
+    ∃ (r : Nat) (T : Type) (_ : CommGroup T) (_ : Finite T),
       Nonempty (H ≃* (Fin r → Multiplicative ℤ) × T) := by
-  -- This is the fundamental structure theorem for f.g. abelian groups.
-  -- The proof requires:
-  -- 1. View H as a ℤ-module (via Additive H)
-  -- 2. Apply the structure theorem for f.g. modules over PIDs
-  -- 3. ℤ is a PID, so Additive H ≃ ℤ^r ⊕ ⨁ᵢ ℤ/nᵢℤ
-  -- 4. The torsion part T = ⨁ᵢ ℤ/nᵢℤ is finite
-  -- 5. Convert back to multiplicative notation
-  -- This requires Mathlib's Module.equiv_directSum_of_isTorsion and related machinery.
-  -- We defer to Mathlib's AddCommGroup.equiv_free_prod_directSum_zmod or similar.
-  sorry
+  -- Apply the additive structure theorem
+  haveI : AddGroup.FG (Additive H) := AddGroup.fg_of_group_fg
+  obtain ⟨n, ι, _, p, hp, e, ⟨addEquiv⟩⟩ :=
+    AddCommGroup.equiv_free_prod_directSum_zmod (Additive H)
+  classical
+  -- p i ^ e i > 0 since p i is prime, so ZMod (p i ^ e i) is finite
+  haveI : ∀ i, NeZero (p i ^ e i) :=
+    fun i => ⟨Nat.pos_iff_ne_zero.mp (pow_pos (Nat.Prime.pos (hp i)) (e i))⟩
+  haveI : ∀ i, Fintype (ZMod (p i ^ e i)) := fun i => ZMod.fintype (p i ^ e i)
+  haveI : Fintype (DirectSum ι fun i => ZMod (p i ^ e i)) := DFinsupp.fintype
+  -- Build equivalences: Additive H ≃+ (Fin n →₀ ℤ) × DirectSum ι (ZMod ...)
+  let freeEquiv : (Fin n →₀ ℤ) ≃+ (Fin n → ℤ) := Finsupp.addEquivFunOnFinite
+  let combinedAddEquiv := addEquiv.trans (freeEquiv.prodCongr (AddEquiv.refl _))
+  -- Convert to multiplicative: H ≃* (Fin n → Multiplicative ℤ) × T
+  let toMul : H ≃* Multiplicative (Additive H) := MulEquiv.refl _
+  let prodMulEquiv := MulEquiv.prodMultiplicative (Fin n → ℤ)
+    (DirectSum ι fun i => ZMod (p i ^ e i))
+  let piMulEquiv := MulEquiv.piMultiplicative (fun _ : Fin n => ℤ)
+  let finalEquiv := toMul.trans ((AddEquiv.toMultiplicative combinedAddEquiv).trans
+      (prodMulEquiv.trans (piMulEquiv.prodCongr (MulEquiv.refl _))))
+  exact ⟨n, Multiplicative (DirectSum ι fun i => ZMod (p i ^ e i)),
+         inferInstance, Finite.of_fintype _, ⟨finalEquiv⟩⟩
 
 /-! ### Lower Central Series Quotients -/
 
