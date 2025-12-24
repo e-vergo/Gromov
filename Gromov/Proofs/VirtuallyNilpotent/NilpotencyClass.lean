@@ -8,6 +8,9 @@ Virtual nilpotency class and examples.
 module
 
 public import Gromov.Proofs.Polycyclic.ResiduallyFinite
+public import Mathlib.GroupTheory.FreeGroup.Reduce
+public import Mathlib.GroupTheory.FreeGroup.IsFreeGroup
+public import Mathlib.GroupTheory.FreeGroup.NielsenSchreier
 
 /-!
 # Virtual Nilpotency Class
@@ -47,6 +50,55 @@ theorem infinite_of_finiteIndex_of_infinite [Infinite G] (H : Subgroup G) [H.Fin
   haveI : Finite (G ⧸ H) := Subgroup.finite_quotient_of_finiteIndex
   have : Finite G := @Finite.of_subgroup_quotient _ _ H _ _
   exact not_finite G
+
+/-- A subgroup of a virtually nilpotent group is virtually nilpotent.
+    Uses intersection with the nilpotent finite-index subgroup. -/
+theorem isVirtuallyNilpotent_subgroup (H : Subgroup G) (hG : IsVirtuallyNilpotent G) :
+    IsVirtuallyNilpotent H := by
+  obtain ⟨K, hKNil, hKFin⟩ := hG
+  -- K.subgroupOf H ≃ (H ⊓ K) as subgroups, and (H ⊓ K) is nilpotent
+  haveI : K.FiniteIndex := hKFin
+  haveI : IsNilpotent K := hKNil
+  -- (H ⊓ K).subgroupOf K is a subgroup of K, hence nilpotent
+  have hSubKNil : IsNilpotent ((H ⊓ K).subgroupOf K) := Subgroup.isNilpotent _
+  -- Via the equivalence, (H ⊓ K) is nilpotent
+  have hInfNil : IsNilpotent (H ⊓ K : Subgroup G) :=
+    (isNilpotent_congr (Subgroup.subgroupOfEquivOfLe (inf_le_right (a := H) (b := K)))).mp hSubKNil
+  -- K.subgroupOf H = (H ⊓ K).subgroupOf H
+  have heq : K.subgroupOf H = (H ⊓ K).subgroupOf H := by
+    ext x
+    simp only [mem_subgroupOf, mem_inf, and_iff_right x.prop]
+  -- (H ⊓ K).subgroupOf H ≃ (H ⊓ K), so it's nilpotent
+  haveI : IsNilpotent (H ⊓ K : Subgroup G) := hInfNil
+  have hNilSub : IsNilpotent (K.subgroupOf H) := by
+    rw [heq]
+    have equiv := Subgroup.subgroupOfEquivOfLe (inf_le_left (a := H) (b := K))
+    exact (isNilpotent_congr equiv).mpr hInfNil
+  -- Finite index
+  have hFinSub : (K.subgroupOf H).FiniteIndex := instFiniteIndex_subgroupOf K H
+  exact ⟨K.subgroupOf H, hNilSub, hFinSub⟩
+
+/-- A quotient of a virtually nilpotent group is virtually nilpotent.
+    Uses image of the nilpotent finite-index subgroup. -/
+theorem isVirtuallyNilpotent_quotient (N : Subgroup G) [N.Normal] (hG : IsVirtuallyNilpotent G) :
+    IsVirtuallyNilpotent (G ⧸ N) := by
+  obtain ⟨K, hKNil, hKFin⟩ := hG
+  haveI : K.FiniteIndex := hKFin
+  haveI : IsNilpotent K := hKNil
+  -- The image of K in G/N
+  let KQ := K.map (QuotientGroup.mk' N)
+  -- KQ is nilpotent (image of nilpotent group under surjective homomorphism)
+  have hKQNil : IsNilpotent KQ :=
+    nilpotent_of_surjective ((QuotientGroup.mk' N).subgroupMap K)
+      ((QuotientGroup.mk' N).subgroupMap_surjective K)
+  -- KQ has finite index
+  have hKQFin : KQ.FiniteIndex := by
+    have hdvd : KQ.index ∣ K.index := Subgroup.index_map_dvd K QuotientGroup.mk_surjective
+    constructor
+    intro h0
+    apply hKFin.index_ne_zero
+    exact Nat.eq_zero_of_zero_dvd (h0 ▸ hdvd)
+  exact ⟨KQ, hKQNil, hKQFin⟩
 
 /-- The virtual nilpotency class is at most the nilpotency class of any finite-index
 nilpotent subgroup. -/
@@ -409,7 +461,9 @@ theorem FreeGroup.not_isVirtuallyNilpotent {α : Type*} (h : ∃ a b : α, a ≠
   haveI : IsFreeGroup H := subgroupIsFreeOfIsFree H
   -- H has finite index in an infinite group, so H is infinite
   haveI : Nonempty α := let ⟨a', _, _⟩ := h; ⟨a'⟩
-  haveI : Infinite (FreeGroup α) := instInfiniteFreeGroupOfNonempty α
+  haveI : Infinite (FreeGroup α) := by
+    classical
+    exact Infinite.of_surjective FreeGroup.norm FreeGroup.norm_surjective
   haveI : Infinite H := infinite_of_finiteIndex_of_infinite H
   -- H is infinite, so it's nontrivial
   haveI : Nontrivial H := inferInstance

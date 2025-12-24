@@ -8,6 +8,8 @@ Residual finiteness of virtually nilpotent groups.
 module
 
 public import Gromov.Proofs.Polycyclic.Core
+public import Gromov.Proofs.Polycyclic.Abelian
+public import Mathlib.GroupTheory.FiniteAbelian.Basic
 
 /-!
 # Residual Finiteness
@@ -42,17 +44,11 @@ The proof uses the multiplicative version of the structure theorem for f.g. abel
 private theorem isResiduallyFinite_of_fg_commGroup (A : Type*) [CommGroup A] [FG A] :
     IsResiduallyFinite A := by
   intro g hg
-  -- By the multiplicative structure theorem, A ≅ (j → Mult ℤ) × ∏ Mult (ZMod (p^e))
-  obtain ⟨ι, j, hιfin, hjfin, p, hp, e, ⟨φ⟩⟩ := CommGroup.equiv_free_prod_prod_multiplicative_zmod A
+  -- By the multiplicative structure theorem, A ≅ (Fin r → Multiplicative ℤ) × T where T is finite
+  obtain ⟨r, T, hT_comm, hT_fin, ⟨φ⟩⟩ := fg_abelian_structure A
   set g' := φ g
   have hg'_ne : g' ≠ 1 := fun h => hg (φ.injective (h.trans (map_one φ).symm))
-  -- The torsion type T is finite
-  let T := (i : ι) → Multiplicative (ZMod (p i ^ e i))
-  haveI : ∀ i, NeZero (p i ^ e i) := fun i => ⟨(Nat.pow_pos (hp i).pos).ne'⟩
-  haveI : ∀ i, Fintype (ZMod (p i ^ e i)) := fun i => ZMod.fintype _
-  haveI : ∀ i, Finite (Multiplicative (ZMod (p i ^ e i))) := fun i =>
-    Finite.of_equiv (ZMod (p i ^ e i)) Multiplicative.ofAdd.symm
-  haveI : Finite T := Pi.finite
+  haveI : Finite T := hT_fin
   -- Case split on whether the free part is trivial
   by_cases hz : g'.1 = 1
   · -- Free part trivial: use projection to torsion
@@ -89,14 +85,14 @@ private theorem isResiduallyFinite_of_fg_commGroup (A : Type*) [CommGroup A] [FG
           _ = n.natAbs := habs.symm
         omega
     -- Build quotient map to finite target
-    haveI : Finite ((k : j) → Multiplicative (ZMod m)) := Pi.finite
-    haveI : Finite (((k : j) → Multiplicative (ZMod m)) × T) := Finite.instProd
-    -- Map (j → Multiplicative ℤ) → (j → Multiplicative (ZMod m)) pointwise
+    haveI : Finite ((k : Fin r) → Multiplicative (ZMod m)) := Pi.finite
+    haveI : Finite (((k : Fin r) → Multiplicative (ZMod m)) × T) := Finite.instProd
+    -- Map (Fin r → Multiplicative ℤ) → (Fin r → Multiplicative (ZMod m)) pointwise
     let castMult : Multiplicative ℤ →* Multiplicative (ZMod m) :=
       AddMonoidHom.toMultiplicative (Int.castAddHom (ZMod m))
-    let q₁ : ((k : j) → Multiplicative ℤ) →* ((k : j) → Multiplicative (ZMod m)) :=
-      castMult.compLeft j
-    let q : ((k : j) → Multiplicative ℤ) × T →* ((k : j) → Multiplicative (ZMod m)) × T :=
+    let q₁ : ((k : Fin r) → Multiplicative ℤ) →* ((k : Fin r) → Multiplicative (ZMod m)) :=
+      castMult.compLeft (Fin r)
+    let q : ((k : Fin r) → Multiplicative ℤ) × T →* ((k : Fin r) → Multiplicative (ZMod m)) × T :=
       MonoidHom.prodMap q₁ (MonoidHom.id T)
     let ψ' : A →* _ := q.comp φ.toMonoidHom
     refine ⟨ψ'.ker, MonoidHom.normal_ker ψ', ?_, ?_⟩
@@ -686,6 +682,25 @@ private theorem isResiduallyFinite_of_fg_nilpotent (H : Type*) [Group H] [FG H]
         intro hgM'
         apply hgNotInM
         exact hgM'
+
+/-- A group is virtually nilpotent iff it has a normal nilpotent subgroup of finite index.
+The forward direction uses that the normalCore of a finite-index nilpotent subgroup is still
+nilpotent (subgroups of nilpotent groups are nilpotent) and has finite index. -/
+private lemma isVirtuallyNilpotent_iff_exists_normal :
+    IsVirtuallyNilpotent G ↔
+      ∃ (N : Subgroup G), N.Normal ∧ IsNilpotent N ∧ N.FiniteIndex := by
+  constructor
+  · intro ⟨H, hNil, hFin⟩
+    haveI := hFin
+    -- The normalCore of H is still nilpotent and has finite index
+    refine ⟨H.normalCore, Subgroup.normalCore_normal H, ?_, ?_⟩
+    · -- normalCore H is nilpotent (subgroup of nilpotent group)
+      have : IsNilpotent (H.normalCore.subgroupOf H) := Subgroup.isNilpotent _
+      exact nilpotent_of_mulEquiv (Subgroup.subgroupOfEquivOfLe (Subgroup.normalCore_le H))
+    · -- normalCore H has finite index
+      exact Subgroup.finiteIndex_normalCore H
+  · intro ⟨N, _, hNil, hFin⟩
+    exact ⟨N, hNil, hFin⟩
 
 theorem residuallyFinite_of_fg_virtuallyNilpotent [FG G] (hG : IsVirtuallyNilpotent G) :
     IsResiduallyFinite G := by

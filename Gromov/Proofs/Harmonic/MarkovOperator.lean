@@ -23,6 +23,7 @@ module
 
 public import Gromov.Proofs.Harmonic.Spectral
 public import Gromov.Proofs.Growth.Polynomial
+public import Gromov.Definitions.WordMetric
 public import Mathlib.Analysis.Normed.Field.Basic
 public import Mathlib.Topology.MetricSpace.Basic
 
@@ -45,7 +46,10 @@ omit [DecidableEq G] in
 theorem markovOperator_contraction (f : G → ℝ) (B : ℝ) (hB : ∀ x, |f x| ≤ B) (x : G) :
     |averagingAt S f x| ≤ B := by
   by_cases hS : Fintype.card S = 0
-  · simp [averagingAt, hS]
+  · unfold averagingAt
+    simp only [hS, Nat.cast_zero, div_zero, zero_mul, abs_zero]
+    have : |f x| ≤ B := hB x
+    linarith [abs_nonneg (f x)]
   have hcard_pos : 0 < Fintype.card S := Nat.pos_of_ne_zero hS
   have hcard_nonneg : (0 : ℝ) ≤ (Fintype.card S : ℝ) := Nat.cast_nonneg _
   have hinv_nonneg : 0 ≤ (1 : ℝ) / (Fintype.card S : ℝ) := by
@@ -53,7 +57,7 @@ theorem markovOperator_contraction (f : G → ℝ) (B : ℝ) (hB : ∀ x, |f x| 
     · exact zero_le_one
     · exact hcard_nonneg
   calc |averagingAt S f x|
-      = |(1 / Fintype.card S) * ∑ s : S, f (x * s.val)| := by simp [averagingAt]
+      = |(1 / Fintype.card S) * ∑ s : S, f (x * s.val)| := by unfold averagingAt; rfl
     _ = |1 / ↑(Fintype.card S)| * |∑ s : S, f (x * s.val)| := abs_mul _ _
     _ = (1 / ↑(Fintype.card S)) * |∑ s : S, f (x * s.val)| := by rw [abs_of_nonneg hinv_nonneg]
     _ ≤ (1 / ↑(Fintype.card S)) * ∑ s : S, |f (x * s.val)| := by
@@ -68,17 +72,15 @@ theorem markovOperator_contraction (f : G → ℝ) (B : ℝ) (hB : ∀ x, |f x| 
         · exact hinv_nonneg
     _ = (1 / ↑(Fintype.card S)) * (Fintype.card S * B) := by
         rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-        ring
     _ = B := by
         have hcard_ne : (Fintype.card S : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hcard_pos)
         field_simp
-        ring
 
 omit [DecidableEq G] in
 /-- The averaging operator preserves non-negativity. -/
 theorem markovOperator_nonneg (f : G → ℝ) (hf : ∀ x, 0 ≤ f x) (x : G) :
     0 ≤ averagingAt S f x := by
-  simp only [averagingAt]
+  unfold averagingAt
   apply mul_nonneg
   · apply div_nonneg
     · exact zero_le_one
@@ -89,20 +91,20 @@ theorem markovOperator_nonneg (f : G → ℝ) (hf : ∀ x, 0 ≤ f x) (x : G) :
 
 omit [DecidableEq G] in
 /-- The averaging operator preserves constant functions. -/
-theorem markovOperator_const (c : ℝ) (x : G) :
+theorem markovOperator_const (c : ℝ) (x : G) [Nonempty S] :
     averagingAt S (fun _ => c) x = c := by
-  simp only [averagingAt]
+  unfold averagingAt
   rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
   have hcard_pos : 0 < Fintype.card S := Fintype.card_pos
   have hcard_ne : (Fintype.card S : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hcard_pos)
   field_simp
-  ring
 
 omit [DecidableEq G] in
 /-- The averaging operator commutes with left translations. -/
 theorem markovOperator_equivariant (f : G → ℝ) (g x : G) :
     averagingAt S (fun y => f (g * y)) x = averagingAt S f (g * x) := by
-  simp [averagingAt, mul_assoc]
+  unfold averagingAt
+  simp [mul_assoc]
 
 end MarkovProperties
 
@@ -117,7 +119,7 @@ theorem AveragingOperator_lipschitz (f : G → ℝ) (L : ℝ) (hL : L ≥ 0)
     ∀ x y, |averagingAt S f x - averagingAt S f y| ≤ L := by
   intro x y
   by_cases hS : Fintype.card S = 0
-  · simp [averagingAt, hS, hL]
+  · unfold averagingAt; simp [hS, hL]
   have hcard_pos : 0 < Fintype.card S := Nat.pos_of_ne_zero hS
   have hcard_nonneg : (0 : ℝ) ≤ (Fintype.card S : ℝ) := Nat.cast_nonneg _
   have hinv_nonneg : 0 ≤ (1 : ℝ) / (Fintype.card S : ℝ) := by
@@ -125,7 +127,8 @@ theorem AveragingOperator_lipschitz (f : G → ℝ) (L : ℝ) (hL : L ≥ 0)
     · exact zero_le_one
     · exact hcard_nonneg
   calc |averagingAt S f x - averagingAt S f y|
-      = |(1 / Fintype.card S) * ∑ s : S, f (x * s.val) - (1 / Fintype.card S) * ∑ s : S, f (y * s.val)| := by simp [averagingAt]
+      = |(1 / Fintype.card S) * ∑ s : S, f (x * s.val) - (1 / Fintype.card S) * ∑ s : S, f (y * s.val)| := by
+          unfold averagingAt; rfl
     _ = |(1 / ↑(Fintype.card S)) * (∑ s : S, f (x * s.val) - ∑ s : S, f (y * s.val))| := by rw [← mul_sub]
     _ = |1 / ↑(Fintype.card S)| * |∑ s : S, f (x * s.val) - ∑ s : S, f (y * s.val)| := abs_mul _ _
     _ = (1 / ↑(Fintype.card S)) * |∑ s : S, f (x * s.val) - ∑ s : S, f (y * s.val)| := by rw [abs_of_nonneg hinv_nonneg]
@@ -144,11 +147,9 @@ theorem AveragingOperator_lipschitz (f : G → ℝ) (L : ℝ) (hL : L ≥ 0)
         · exact hinv_nonneg
     _ = (1 / ↑(Fintype.card S)) * (Fintype.card S * L) := by
         rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-        ring
     _ = L := by
         have hcard_ne : (Fintype.card S : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.pos_iff_ne_zero.mp hcard_pos)
         field_simp
-        ring
 
 omit [DecidableEq G] in
 /-- Iterated Markov operators preserve Lipschitz bounds. -/
@@ -171,20 +172,30 @@ noncomputable def heatKernel (n : ℕ) (x y : G) : ℝ :=
 noncomputable def returnProbability (n : ℕ) : ℝ :=
   heatKernel S n 1 1
 
+omit [DecidableEq G] in
+/-- MarkovPower preserves non-negativity of functions. -/
+theorem MarkovPower_nonneg (n : ℕ) (f : G → ℝ) (hf : ∀ x, 0 ≤ f x) (x : G) :
+    0 ≤ MarkovPower S n f x := by
+  induction n generalizing f x with
+  | zero =>
+    unfold MarkovPower
+    exact hf x
+  | succ n ih =>
+    show 0 ≤ MarkovPower S n (MarkovOperator S f) x
+    apply ih
+    intro z
+    -- MarkovOperator S = AveragingOperator S, and (AveragingOperator S f x) = averagingAt S f x
+    simp only [MarkovOperator, Gromov.Harmonic.Spectral.AveragingOperator_apply]
+    exact markovOperator_nonneg S f hf z
+
 /-- Heat kernel is non-negative. -/
 theorem heatKernel_nonneg (n : ℕ) (x y : G) : 0 ≤ heatKernel S n x y := by
-  simp only [heatKernel]
-  induction n generalizing x with
-  | zero =>
-    -- MarkovPower 0 = LinearMap.id, so (MarkovPower S 0 f) x = f x
-    simp only [MarkovPower, LinearMap.id_coe, id_eq]
-    split
-    · exact zero_le_one
-    · exact le_refl 0
-  | succ n ih =>
-    -- MarkovPower (n+1) = (MarkovPower n).comp (MarkovOperator S)
-    simp only [MarkovPower, LinearMap.comp_apply, MarkovOperator, LinearMap.coe_mk, AddHom.coe_mk]
-    apply ih
+  unfold heatKernel
+  apply MarkovPower_nonneg
+  intro z
+  split
+  · exact zero_le_one
+  · exact le_refl 0
 
 /-- Heat kernel sums to 1 over y (probability measure). -/
 theorem heatKernel_sum_eq_one (n : ℕ) (x : G) (ball : Finset G)
@@ -205,7 +216,7 @@ theorem heatKernel_upper_bound (d : ℕ)
     (hd : IsPolynomiallyBounded (fun n => (CayleyBall S n).ncard) d) :
     ∃ C c : ℝ, C > 0 ∧ c > 0 ∧ ∀ n : ℕ, n > 0 → ∀ x y : G,
       heatKernel S n x y ≤ C * (n : ℝ)^(-(d : ℝ)/2) *
-        Real.exp (-c * (wordMetric S x y : ℝ)^2 / n) := by
+        Real.exp (-c * (wordDist S x y : ℝ)^2 / n) := by
   sorry
 
 end HeatKernel
@@ -264,7 +275,7 @@ noncomputable def MarkovSpectralRadius : ℝ := 1  -- Placeholder, actual defini
 /-- For polynomial growth groups, the spectral radius equals 1 (no spectral gap).
     This is equivalent to amenability and has deep connections to the Kesten criterion. -/
 theorem spectralRadius_eq_one_of_polynomial_growth (hpoly : HasPolynomialGrowth G) :
-    MarkovSpectralRadius S = 1 := by
+    MarkovSpectralRadius = 1 := by
   sorry
 
 end SpectralRadius

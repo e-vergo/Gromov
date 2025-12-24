@@ -26,6 +26,7 @@ public import Gromov.Proofs.VirtuallyNilpotent.Core
 public import Mathlib.GroupTheory.Commutator.Basic
 public import Mathlib.GroupTheory.Abelianization.Defs
 public import Mathlib.GroupTheory.FreeGroup.Basic
+public import Mathlib.GroupTheory.Nilpotent
 
 namespace Gromov.Group.CommutatorFG
 
@@ -45,20 +46,20 @@ variable [Group.FG G]
     More precisely, [G,G] is the normal closure of {[s,t] : s,t ∈ S}
     where S is any generating set. -/
 theorem commutator_mem_of_generators (S : Set G) (hS : closure S = ⊤) :
-    ∀ g ∈ commutator G G,
+    ∀ g ∈ commutator G,
       g ∈ normalClosure { ⁅s, t⁆ | (s : G) (t : G) (_ : s ∈ S ∪ S⁻¹) (_ : t ∈ S ∪ S⁻¹) } := by
   sorry
 
 /-- The commutator subgroup of a finitely generated group is finitely normally generated.
     That is, [G,G] is the normal closure of finitely many elements. -/
 theorem commutator_finitelyNormallyGenerated :
-    ∃ (T : Finset G), normalClosure (T : Set G) = commutator G G := by
+    ∃ (T : Finset G), normalClosure (T : Set G) = commutator G := by
   sorry
 
 /-- The commutator of two FG subgroups is FG (when they normalize each other).
     This generalizes to ⁅H, K⁆ being FG when H and K are FG and normal. -/
-theorem Subgroup.fg_commutator (H K : Subgroup G) [hH : H.FG] [hK : K.FG]
-    (hHN : H.Normal) (hKN : K.Normal) : (commutator H K).FG := by
+theorem Subgroup.fg_commutator (H K : Subgroup G) (hH : H.FG) (hK : K.FG)
+    (hHN : H.Normal) (hKN : K.Normal) : (⁅H, K⁆).FG := by
   sorry
 
 /-- The abelianization G/[G,G] of a finitely generated group is finitely generated. -/
@@ -67,12 +68,12 @@ theorem abelianization_fg : Group.FG (Abelianization G) := by
 
 /-- If the abelianization is finite, then [G,G] has finite index. -/
 theorem commutator_finiteIndex_of_abelianization_finite
-    [Finite (Abelianization G)] : (commutator G G).FiniteIndex := by
+    [Finite (Abelianization G)] : (commutator G).FiniteIndex := by
   sorry
 
 /-- Characterization: [G,G] has finite index iff the abelianization is finite. -/
 theorem commutator_finiteIndex_iff_abelianization_finite :
-    (commutator G G).FiniteIndex ↔ Finite (Abelianization G) := by
+    (commutator G).FiniteIndex ↔ Finite (Abelianization G) := by
   sorry
 
 end CommutatorFG
@@ -131,18 +132,18 @@ variable [Group.FG G]
 
 /-- For virtually nilpotent FG groups, some term of the LCS has finite index.
     This is key to the structure theory. -/
-theorem virtuallyNilpotent_lowerCentralSeries_finite [IsVirtuallyNilpotent G] :
+theorem virtuallyNilpotent_lowerCentralSeries_finite (hVN : Group.IsVirtuallyNilpotent G) :
     ∃ n : ℕ, (lowerCentralSeries G n).FiniteIndex := by
   sorry
 
 /-- The commutator of a virtually nilpotent FG group is virtually nilpotent. -/
-theorem commutator_virtuallyNilpotent [IsVirtuallyNilpotent G] :
-    IsVirtuallyNilpotent (commutator G G) := by
+theorem commutator_virtuallyNilpotent (hVN : Group.IsVirtuallyNilpotent G) :
+    Group.IsVirtuallyNilpotent (commutator G) := by
   sorry
 
 /-- Virtually nilpotent groups have virtually solvable abelianization.
     More specifically, for VN groups, the torsion part of the abelianization is finite. -/
-theorem virtuallyNilpotent_abelianization_torsion_finite [IsVirtuallyNilpotent G] :
+theorem virtuallyNilpotent_abelianization_torsion_finite (hVN : Group.IsVirtuallyNilpotent G) :
     ∃ (T : Subgroup (Abelianization G)), T.Normal ∧ Finite T ∧
       ∀ (x : Abelianization G), (∃ n : ℕ, n > 0 ∧ x ^ n = 1) → x ∈ T := by
   sorry
@@ -162,7 +163,7 @@ theorem hall_witt (x y z : G) :
 
 /-- Consequence of Hall-Witt: [γ_m, γ_n] ⊆ γ_{m+n} -/
 theorem lowerCentralSeries_commutator_le (m n : ℕ) :
-    commutator (lowerCentralSeries G m) (lowerCentralSeries G n) ≤
+    ⁅lowerCentralSeries G m, lowerCentralSeries G n⁆ ≤
       lowerCentralSeries G (m + n) := by
   sorry
 

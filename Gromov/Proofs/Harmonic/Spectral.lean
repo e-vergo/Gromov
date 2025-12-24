@@ -31,7 +31,7 @@ variable (S : Set G) [Fintype S]
 
 /-- The averaging operator applied to a function at a point.
     (A f)(x) = (1/|S|) * sum_{s in S} f(x * s) -/
-noncomputable def averagingAt (f : G → ℝ) (x : G) : ℝ :=
+@[expose] noncomputable def averagingAt (f : G → ℝ) (x : G) : ℝ :=
   (1 / Fintype.card S) * ∑ s : S, f (x * s.val)
 
 /-- The discrete Laplacian applied to a function at a point.
@@ -41,7 +41,7 @@ noncomputable def discreteLaplacianAt (f : G → ℝ) (x : G) : ℝ :=
 
 /-- The averaging operator: convolves a function with the uniform measure on S.
     (A f)(x) = (1/|S|) * sum_{s in S} f(x * s) -/
-noncomputable def AveragingOperator : (G → ℝ) →ₗ[ℝ] (G → ℝ) where
+@[expose] noncomputable def AveragingOperator : (G → ℝ) →ₗ[ℝ] (G → ℝ) where
   toFun := fun f x => averagingAt S f x
   map_add' := fun f g => by
     ext x
@@ -54,6 +54,10 @@ noncomputable def AveragingOperator : (G → ℝ) →ₗ[ℝ] (G → ℝ) where
     rw [Finset.mul_sum]
     ring_nf
     rw [Finset.mul_sum]
+
+omit [DecidableEq G] in
+@[simp] theorem AveragingOperator_apply (f : G → ℝ) (x : G) :
+    AveragingOperator S f x = averagingAt S f x := rfl
 
 /-- The discrete Laplacian: identity minus averaging.
     (Delta f)(x) = f(x) - (1/|S|) * sum_{s in S} f(x * s) -/
@@ -246,11 +250,15 @@ section MarkovOperator
 variable (S : Set G) [Fintype S]
 
 /-- The Markov operator (same as averaging operator). -/
-noncomputable def MarkovOperator : (G → ℝ) →ₗ[ℝ] (G → ℝ) :=
+@[expose] noncomputable def MarkovOperator : (G → ℝ) →ₗ[ℝ] (G → ℝ) :=
   AveragingOperator S
 
+omit [DecidableEq G] in
+@[simp] theorem MarkovOperator_apply (f : G → ℝ) (x : G) :
+    MarkovOperator S f x = averagingAt S f x := rfl
+
 /-- The n-step transition operator is the n-th power of the Markov operator. -/
-noncomputable def MarkovPower (n : ℕ) : (G → ℝ) →ₗ[ℝ] (G → ℝ) := by
+@[expose] noncomputable def MarkovPower (n : ℕ) : (G → ℝ) →ₗ[ℝ] (G → ℝ) := by
   induction n with
   | zero => exact LinearMap.id
   | succ _ ih => exact ih.comp (MarkovOperator S)

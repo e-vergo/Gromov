@@ -17,7 +17,7 @@ variable {G : Type*} [Group G]
 /-! ## Helper lemmas (locally defined to avoid broken imports) -/
 
 /-- Finite groups are virtually nilpotent. -/
-private theorem isVirtuallyNilpotent_of_finite [Finite G] : IsVirtuallyNilpotent G := by
+private theorem isVirtuallyNilpotent_of_finite [Finite G] : Group.IsVirtuallyNilpotent G := by
   -- The trivial subgroup is nilpotent and has finite index
   refine ⟨⊥, ?_, ?_⟩
   · exact isNilpotent_of_subsingleton
@@ -209,7 +209,7 @@ This is the cleanest formulation for the descent argument, since by induction
 the kernel is virtually nilpotent (having lower polynomial growth degree).
 -/
 theorem kernel_fg_of_surj_to_Z_of_virtuallyNilpotent [FG G] (φ : G →* Multiplicative ℤ)
-    (_hφ : Function.Surjective φ) (hG : IsVirtuallyNilpotent G) : FG φ.ker := by
+    (_hφ : Function.Surjective φ) (hG : Group.IsVirtuallyNilpotent G) : FG φ.ker := by
   -- Strategy: Use that virtually nilpotent groups are polycyclic,
   -- and polycyclic groups have the property that all subgroups are FG.
   -- The kernel φ.ker is a subgroup of G, hence FG.
@@ -222,10 +222,9 @@ theorem kernel_fg_of_surj_to_Z_of_virtuallyNilpotent [FG G] (φ : G →* Multipl
 /-- If K is virtually nilpotent and G/K ≅ Z, then G is virtually nilpotent. -/
 theorem isVirtuallyNilpotent_of_extension_by_Z (K : Subgroup G) [K.Normal] [FG K]
     (hQ : Nonempty (G ⧸ K ≃* Multiplicative ℤ))
-    (hK : IsVirtuallyNilpotent K) : IsVirtuallyNilpotent G := by
-  -- Get a normal nilpotent subgroup N of K with finite index
-  rw [isVirtuallyNilpotent_iff_exists_normal] at hK
-  obtain ⟨N, hN_normal, hN_nil, hN_fin⟩ := hK
+    (hK : Group.IsVirtuallyNilpotent K) : Group.IsVirtuallyNilpotent G := by
+  -- Get a nilpotent subgroup N of K with finite index
+  obtain ⟨N, hN_nil, hN_fin⟩ := hK
   haveI : N.FiniteIndex := hN_fin
   haveI : IsNilpotent N := hN_nil
    -- Use the polycyclic characterization approach:
@@ -263,7 +262,7 @@ theorem isVirtuallyNilpotent_of_extension_by_Z (K : Subgroup G) [K.Normal] [FG K
     Requires polynomial growth to ensure the kernel is finitely generated. -/
 theorem isVirtuallyNilpotent_of_surj_to_Z [FG G] (φ : G →* Multiplicative ℤ)
     (hφ : Function.Surjective φ) (hG : HasPolynomialGrowth G)
-    (hK : IsVirtuallyNilpotent φ.ker) : IsVirtuallyNilpotent G := by
+    (hK : Group.IsVirtuallyNilpotent φ.ker) : Group.IsVirtuallyNilpotent G := by
   haveI : FG φ.ker := kernel_fg_of_surj_to_Z_of_polynomialGrowth φ hφ hG
   apply isVirtuallyNilpotent_of_extension_by_Z φ.ker
   · exact ⟨QuotientGroup.quotientKerEquivOfSurjective φ hφ⟩
@@ -275,7 +274,7 @@ theorem isVirtuallyNilpotent_of_surj_to_Z [FG G] (φ : G →* Multiplicative ℤ
     This is the core inductive step, proved by strong induction on d. -/
 theorem isVirtuallyNilpotent_of_polynomialGrowthDegree :
     ∀ (d : ℕ) (G : Type*) [Group G] [FG G],
-    HasPolynomialGrowthDegree G d → IsVirtuallyNilpotent G := by
+    HasPolynomialGrowthDegree G d → Group.IsVirtuallyNilpotent G := by
   intro d
   induction d using Nat.strong_induction_on with
   | _ d ih =>
@@ -306,14 +305,14 @@ theorem isVirtuallyNilpotent_of_polynomialGrowthDegree :
       -- Kernel is finitely generated
       haveI : FG φ.ker := fg_of_hasPolynomialGrowthDegree hker_deg
       -- By induction, kernel is virtually nilpotent (d - 1 < d)
-      have hK : IsVirtuallyNilpotent φ.ker :=
+      have hK : Group.IsVirtuallyNilpotent φ.ker :=
         ih (d - 1) (Nat.sub_lt hd_pos Nat.one_pos) φ.ker hker_deg
       -- Extension by Z preserves virtual nilpotency
       exact isVirtuallyNilpotent_of_surj_to_Z φ hφ h hK
 
 
 theorem isVirtuallyNilpotent_of_polynomialGrowth [FG G] (h : HasPolynomialGrowth G) :
-    IsVirtuallyNilpotent G := by
+    Group.IsVirtuallyNilpotent G := by
   -- Get a polynomial growth degree
   obtain ⟨d, hd⟩ := hasPolynomialGrowthDegree_of_hasPolynomialGrowth h
   -- Apply the inductive theorem

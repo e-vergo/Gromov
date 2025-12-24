@@ -106,13 +106,13 @@ theorem ball_ratio_bound (d : ℕ)
   sorry
 
 /-- Lower bound: balls have positive size for infinite groups. -/
-theorem CayleyBall.ncard_pos_of_infinite [Infinite G] (hS : closure S = ⊤) (n : ℕ) :
+theorem CayleyBall.ncard_pos_of_infinite [Infinite G] (hS : Subgroup.closure S = ⊤) (n : ℕ) :
     0 < (CayleyBall S n).ncard := by
   sorry
 
 /-- Growth lower bound: |B(n)| ≥ n for infinite FG groups. -/
 theorem growth_lower_bound [Infinite G] [Group.FG G]
-    (hS : closure S = ⊤) (n : ℕ) (hn : n > 0) :
+    (hS : Subgroup.closure S = ⊤) (n : ℕ) (hn : n > 0) :
     n ≤ (CayleyBall S n).ncard := by
   sorry
 
@@ -169,7 +169,7 @@ theorem growth_degree_eq_doubling_dimension (d : ℕ)
 /-- Polynomial growth implies finite doubling dimension. -/
 theorem doublingDimension_finite (d : ℕ)
     (hd : IsPolynomiallyBounded (fun n => (CayleyBall S n).ncard) d) :
-    doublingDimension S < ⊤ := by
+    ∃ B : ℝ, doublingDimension S ≤ B := by
   sorry
 
 /-- Doubling dimension is non-negative. -/
@@ -203,7 +203,7 @@ theorem ball_growth_upper_bound (d : ℝ) (hd : doublingDimension S ≤ d) (n : 
   sorry
 
 /-- Lower bound on ball growth for infinite groups. -/
-theorem ball_growth_lower_bound [Infinite G] [Group.FG G] (hS : closure S = ⊤)
+theorem ball_growth_lower_bound [Infinite G] [Group.FG G] (hS : Subgroup.closure S = ⊤)
     (n : ℕ) (hn : n > 0) :
     ∃ c : ℝ, c > 0 ∧ c * n ≤ (CayleyBall S n).ncard := by
   sorry

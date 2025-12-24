@@ -8,6 +8,7 @@ Polycyclic groups and their relationship to virtual nilpotency.
 module
 
 public import Gromov.Proofs.VirtuallyNilpotent.Core
+public import Mathlib.GroupTheory.Schreier
 
 /-!
 # Polycyclic Groups

@@ -5,8 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 Finitely generated abelian groups and their polycyclic structure.
 -/
 
-import Gromov.Proofs.Polycyclic.Core
-import Mathlib.Data.DFinsupp.FiniteInfinite
+module
+
+public import Gromov.Proofs.Polycyclic.Core
+public import Mathlib.Data.DFinsupp.FiniteInfinite
+public import Mathlib.GroupTheory.FiniteAbelian.Basic
 
 /-!
 # Finitely Generated Abelian Groups and Polycyclic Structure
@@ -48,6 +51,8 @@ commutators of elements from G and G_i.
 open Subgroup Group
 
 namespace Group
+
+public section
 
 variable {G : Type*} [Group G]
 
@@ -195,5 +200,7 @@ theorem lowerCentralSeries_quotient_central (H : Type*) [Group H] (i : Nat) :
   convert hcomm using 1
   simp only [commutatorElement_def]
   group
+
+end
 
 end Group
