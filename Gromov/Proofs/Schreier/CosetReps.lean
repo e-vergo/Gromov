@@ -46,7 +46,10 @@ finitely many generators. -/
 theorem cosetReps_exist [H.FiniteIndex] :
     ∃ (R : Finset G), (1 : G) ∈ R ∧ IsCosetRepSet H (R : Set G) := by
   obtain ⟨R₀, hR, hR1⟩ := H.exists_isComplement_right 1
-  sorry
+  have hR_finite : R₀.Finite := hR.finite_right_iff.mpr inferInstance
+  refine ⟨hR_finite.toFinset, hR_finite.mem_toFinset.mpr hR1, ?_⟩
+  rw [hR_finite.coe_toFinset]
+  exact hR
 
 /-- Coset representatives cover G: every element can be factored as (coset rep) * (element in H).
 More precisely, for any g in G, there exists r in R and h in H such that g = h * r. -/
@@ -69,7 +72,18 @@ theorem cosetReps_unique {R : Set G} (hR : IsCosetRepSet H R) {_g : G}
     {r₁ r₂ : G} (_hr₁ : r₁ ∈ R) (_hr₂ : r₂ ∈ R)
     {h₁ h₂ : G} (_hh₁ : h₁ ∈ H) (_hh₂ : h₂ ∈ H)
     (_heq : h₁ * r₁ = h₂ * r₂) : r₁ = r₂ := by
-  sorry
+  have h_prod : h₂⁻¹ * h₁ * r₁ = r₂ := by
+    calc h₂⁻¹ * h₁ * r₁ = h₂⁻¹ * (h₁ * r₁) := by group
+      _ = h₂⁻¹ * (h₂ * r₂) := by rw [_heq]
+      _ = r₂ := by group
+  have h_mem : h₂⁻¹ * h₁ ∈ H := Subgroup.mul_mem H (Subgroup.inv_mem H _hh₂) _hh₁
+  have h_inj := hR.1
+  have : ((⟨h₂⁻¹ * h₁, h_mem⟩ : ↑H), (⟨r₁, _hr₁⟩ : R)) =
+         ((⟨1, Subgroup.one_mem H⟩ : ↑H), (⟨r₂, _hr₂⟩ : R)) := by
+    apply h_inj
+    simp [h_prod]
+  simp only [Prod.mk.injEq, Subtype.mk.injEq] at this
+  exact this.2
 
 /-! ### Schreier Generators -/
 
@@ -107,7 +121,9 @@ theorem schreierGenerators_finite [H.FiniteIndex] {S : Finset G}
     {R : Finset G} (hR : IsCosetRepSet H (R : Set G)) :
     (schreierGenerators H (S : Set G) (R : Set G) hR).Finite := by
   unfold schreierGenerators
-  sorry
+  refine Set.Finite.image _ ?_
+  have hR_fin : (R : Set G).Finite := hR.finite_right_iff.mpr inferInstance
+  exact hR_fin.mul S.finite_toSet
 
 /-- The cardinality of Schreier generators is at most [G:H] * |S|.
 
@@ -119,8 +135,26 @@ it shows that finite-index subgroups of finitely generated groups are finitely g
 theorem schreierGenerators_card_le [H.FiniteIndex] {S : Finset G}
     {R : Finset G} (hR : IsCosetRepSet H (R : Set G)) (_hR1 : (1 : G) ∈ R) :
     (schreierGenerators H (S : Set G) (R : Set G) hR).ncard ≤ R.card * S.card := by
+  classical
   unfold schreierGenerators
-  sorry
+  have hR_fin : (R : Set G).Finite := hR.finite_right_iff.mpr inferInstance
+  have hRS : ((R : Set G) * (S : Set G)).Finite := hR_fin.mul S.finite_toSet
+  trans ((R : Set G) * (S : Set G)).ncard
+  · exact Set.ncard_image_le
+  · have : ((R : Set G) * (S : Set G)) ⊆ (R.product S).image (fun p => p.1 * p.2) := by
+      intro x hx
+      obtain ⟨r, hr, s, hs, rfl⟩ := Set.mem_mul.mp hx
+      simp only [Finset.coe_image, Set.mem_image, Finset.mem_coe]
+      exact ⟨(r, s), Finset.mem_product.mpr ⟨hr, hs⟩, rfl⟩
+    calc ((R : Set G) * (S : Set G)).ncard
+        ≤ ((R.product S).image (fun p => p.1 * p.2) : Set G).ncard := by
+          refine Set.ncard_le_ncard this ?_
+          simp only [Finset.coe_image]
+          exact (R.product S).finite_toSet.image _
+        _ = ((R.product S).image (fun p => p.1 * p.2)).card := by
+          simp only [Set.ncard_coe_finset]
+        _ ≤ (R.product S).card := Finset.card_image_le
+        _ = R.card * S.card := Finset.card_product _ _
 
 /-! ### Connection to Mathlib's Schreier Infrastructure -/
 
@@ -132,8 +166,15 @@ This is a packaging of the above results into a single existence statement. -/
 -- Apply schreierGenerators_generate and schreierGenerators_finite.
 theorem exists_finite_schreier_generators [H.FiniteIndex] [Group.FG G] :
     ∃ (T : Finset H), closure (T : Set H) = ⊤ := by
-  -- Get a finite generating set for G
-  sorry
+  obtain ⟨S, hS⟩ := Group.FG.out (G := G)
+  obtain ⟨R, hR1, hR⟩ := cosetReps_exist (H := H)
+  have hS_gen : closure (S : Set G) = ⊤ := hS
+  have hfin := schreierGenerators_finite (S := S) (R := R) hR
+  use hfin.toFinset
+  have : schreierGenerators H (S : Set G) (R : Set G) hR = ↑hfin.toFinset := by
+    exact hfin.coe_toFinset.symm
+  rw [←this]
+  exact schreierGenerators_generate (S : Set G) hS_gen (R : Set G) hR hR1
 
 end
 

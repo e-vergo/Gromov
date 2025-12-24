@@ -273,7 +273,11 @@ theorem bounded_doubling_covering (hpoly : HasPolynomialGrowth G)
     --
     -- Calculation:
     have h4R : (CayleyBall S (4 * R)).ncard ≤ Nat.ceil (C_S * (4 * R : ℝ) ^ d_S) := by
-      sorry
+      unfold GrowthFunction at h_growth_S
+      have h4R_pos : 4 * R > 0 := by omega
+      have h_bound := h_growth_S (4 * R) h4R_pos
+      rw [show C_S * (4 * ↑R : ℝ) ^ d_S = C_S * ↑(4 * R) ^ d_S by norm_cast]
+      exact Nat.cast_le.mp (h_bound.trans (Nat.le_ceil _))
     -- Now we need to relate this to |B(R)|
     -- The issue: we need |B(R)| to be large enough.
     --
@@ -398,7 +402,7 @@ def LipschitzHarmonicSubspace (L : ℝ) : Submodule ℝ (G → ℝ) where
       have hg := h2b x y
       calc |f x + g x - (f y + g y)|
           = |f x - f y + (g x - g y)| := by ring_nf
-        _ ≤ |f x - f y| + |g x - g y| := sorry
+        _ ≤ |f x - f y| + |g x - g y| := abs_add_le _ _
         _ ≤ M1 * (wordDist S x y : ℝ) + M2 * (wordDist S x y : ℝ) := by linarith
         _ = (M1 + M2) * (wordDist S x y : ℝ) := by ring
   zero_mem' := by
@@ -411,7 +415,7 @@ def LipschitzHarmonicSubspace (L : ℝ) : Submodule ℝ (G → ℝ) where
       intro x y
       simp only [Pi.zero_apply]
       rw [sub_zero, abs_zero]
-      sorry
+      simp
   smul_mem' := fun c f ⟨hf_harm, ⟨M, hM_pos, hf_lip⟩⟩ => by
     constructor
     · -- Scalar multiple of harmonic is harmonic (IsHarmonicSymmetric)
@@ -428,11 +432,11 @@ def LipschitzHarmonicSubspace (L : ℝ) : Submodule ℝ (G → ℝ) where
         intro x y
         simp only [zero_smul, Pi.zero_apply]
         rw [sub_zero, abs_zero]
-        sorry
+        simp
       · -- If c ≠ 0, result is |c|*M-Lipschitz
         use |c| * M, by
           apply mul_pos
-          · sorry
+          · exact abs_pos.mpr hc
           · exact hM_pos
         intro x y
         simp only [Pi.smul_apply, smul_eq_mul]

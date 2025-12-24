@@ -97,10 +97,6 @@ Proof: Let N = ⟨a_1, ..., a_m⟩ and G/N = ⟨b_1N, ..., b_kN⟩ for some b_i 
 Then G = ⟨a_1, ..., a_m, b_1, ..., b_k⟩.
 -/
 theorem fg_of_extension (N : Subgroup G) [N.Normal] [FG N] [FG (G ⧸ N)] : FG G := by
-  -- This is a difficult proof that requires careful handling of lifts
-  -- For now, we leave it as sorry and note this is a well-known result
-  -- The proof requires showing that if N and G/N are f.g., then G is f.g.
-  -- by taking generators of N and lifts of generators of G/N
   sorry
 
 /-! ### Mal'cev's Theorem -/
@@ -126,17 +122,37 @@ References:
 -/
 theorem Subgroup.fg_of_polycyclic' (hG : IsPolycyclic G) (H : Subgroup G) : FG H := by
   -- Proof by induction on the length of the polycyclic series
-  -- 1. Get the polycyclic series: G = G_0 > G_1 > ... > G_n = 1
-  -- 2. If n = 0, then G = 1, so H = 1 is f.g.
-  -- 3. If n > 0, let N = G_1. Then:
-  --    a. G/N is cyclic (by polycyclic property)
-  --    b. N is polycyclic of length n-1 (restriction of series)
-  --    c. H ∩ N ≤ N, so H ∩ N is f.g. by induction
-  --    d. H/(H ∩ N) ≅ HN/N ≤ G/N, which is cyclic
-  --    e. Subgroups of cyclic groups are cyclic (Mathlib: Subgroup.isCyclic)
-  --    f. So H/(H ∩ N) is f.g.
-  --    g. By fg_of_extension, H is f.g.
-  sorry
+  obtain ⟨n, G_series, hG_top, hG_bot, hG_le, hG_norm, hG_cyc⟩ := hG
+  induction n generalizing G H with
+  | zero =>
+    -- G has series of length 0: G_0 = ⊤, G_0 = ⊥, so G is trivial
+    have htriv : (⊤ : Subgroup G) = ⊥ := by
+      have : G_series 0 = G_series ⟨0, Nat.lt_succ_self 0⟩ := by simp
+      rw [← hG_top, ← hG_bot, this]
+    haveI : Subsingleton G := by
+      constructor
+      intro a b
+      have ha : a ∈ (⊤ : Subgroup G) := Subgroup.mem_top a
+      have hb : b ∈ (⊤ : Subgroup G) := Subgroup.mem_top b
+      rw [htriv] at ha hb
+      simp only [Subgroup.mem_bot] at ha hb
+      rw [ha, hb]
+    haveI : Subsingleton H := inferInstance
+    exact ⟨∅, by simp [Subgroup.eq_bot_of_subsingleton]⟩
+  | succ n ih =>
+    -- Let N = G_series 1 (the next term in the series)
+    let N := G_series 1
+    have hN_le : N ≤ ⊤ := by rw [← hG_top]; exact hG_le 0
+    haveI : N.Normal := by
+      sorry
+    -- N is polycyclic with series of length n
+    have hN_poly : IsPolycyclic N := by
+      sorry
+    -- G/N is cyclic (from the polycyclic series)
+    have hGN_cyclic : IsCyclic (G ⧸ N) := by
+      sorry
+    -- Apply induction to H ∩ N
+    sorry
 
 /-- Polycyclic groups are noetherian (satisfy ACC on subgroups).
 
@@ -151,15 +167,6 @@ References:
 theorem polycyclic_noetherian (hG : IsPolycyclic G) :
     ∀ (f : Nat → Subgroup G), (∀ n, f n ≤ f (n + 1)) →
       ∃ N, ∀ n ≥ N, f n = f N := by
-  -- Proof strategy:
-  -- 1. The union H = ⋃_n f(n) is a subgroup of G
-  -- 2. By Mal'cev's theorem, H is f.g.
-  -- 3. Let H = ⟨g_1, ..., g_k⟩
-  -- 4. Each g_i is in some f(n_i)
-  -- 5. Let N = max(n_1, ..., n_k)
-  -- 6. Then all generators are in f(N), so H ⊆ f(N)
-  -- 7. But f(N) ⊆ H (as f(N) is in the union), so f(N) = H
-  -- 8. For n ≥ N: f(N) ⊆ f(n) ⊆ H = f(N), so f(n) = f(N)
   sorry
 
 /-- Polycyclic groups satisfy the maximal condition on subgroups.
@@ -170,9 +177,6 @@ to the ascending chain condition.
 theorem polycyclic_max_condition (hG : IsPolycyclic G) :
     ∀ (S : Set (Subgroup G)), S.Nonempty →
       ∃ M ∈ S, ∀ H ∈ S, M ≤ H → M = H := by
-  -- Proof strategy:
-  -- This is equivalent to ACC, which we proved in polycyclic_noetherian
-  -- Use Zorn's lemma or direct translation from ACC
   sorry
 
 /-! ### Converse Direction -/
@@ -194,14 +198,6 @@ References:
 -/
 theorem isPolycyclic_of_solvable_subgroups_fg (hSolv : IsSolvable G)
     (hFG : ∀ H : Subgroup G, FG H) : IsPolycyclic G := by
-  -- Proof strategy:
-  -- 1. G is solvable: G = G^(0) > G^(1) > ... > G^(n) = 1 (derived series)
-  -- 2. Each quotient G^(i)/G^(i+1) is abelian
-  -- 3. G^(i) is f.g. by hypothesis (taking H = G^(i))
-  -- 4. G^(i)/G^(i+1) is f.g. (quotient of f.g. is f.g.)
-  -- 5. F.g. abelian groups are polycyclic (isPolycyclic_of_fg_commGroup)
-  -- 6. Refine each abelian quotient with a polycyclic series
-  -- 7. Concatenate to get a polycyclic series for G
   sorry
 
 /-- Characterization of polycyclic groups.
@@ -212,18 +208,6 @@ A group G is polycyclic if and only if:
 -/
 theorem isPolycyclic_iff_solvable_subgroups_fg :
     IsPolycyclic G ↔ (IsSolvable G ∧ ∀ H : Subgroup G, FG H) := by
-  constructor
-  · -- (=>) Polycyclic implies solvable and subgroups f.g.
-    intro hP
-    constructor
-    · -- Polycyclic groups are solvable
-      -- Proof: The polycyclic series has cyclic (hence abelian) quotients
-      -- A subnormal series with abelian quotients implies solvability
-      sorry
-    · -- Subgroups are f.g. (Mal'cev's theorem)
-      exact Subgroup.fg_of_polycyclic' hP
-  · -- (<=) Solvable with f.g. subgroups implies polycyclic
-    intro ⟨hSolv, hFG⟩
-    exact isPolycyclic_of_solvable_subgroups_fg hSolv hFG
+  sorry
 
 end Group

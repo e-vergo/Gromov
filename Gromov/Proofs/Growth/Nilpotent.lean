@@ -228,129 +228,6 @@ private lemma cayleyBall_subtype_val_ncard {G : Type*} [Group G] (H : Subgroup G
     obtain ⟨h, hval, hball⟩ := hmap_inv g hg
     exact ⟨h, hball, hval⟩
 
-private theorem cayleyBall_lift_bound_for_center_quotient {G : Type*} [Group G]
-    (S_Q : Set (G ⧸ center G)) (S_Z : Set (center G)) (m : ℕ) :
-    let lift := fun (q : G ⧸ center G) => Quotient.out q
-    let S_Q_lifts : Set G := lift '' S_Q
-    let S_Z_embed : Set G := Subtype.val '' S_Z
-    (CayleyBall S_Q m).ncard * (CayleyBall S_Z m).ncard ≤
-      (CayleyBall S_Q_lifts m).ncard * (CayleyBall S_Z_embed m).ncard := by
-  intro lift S_Q_lifts S_Z_embed
-  -- The center embedding preserves CayleyBall cardinality (bijection via val)
-  have hZ_eq : (CayleyBall S_Z_embed m).ncard = (CayleyBall S_Z m).ncard :=
-    cayleyBall_subtype_val_ncard (center G) S_Z m
-  rw [hZ_eq]
-  gcongr
-  -- Need: |CayleyBall S_Q m| ≤ |CayleyBall S_Q_lifts m|
-  -- The quotient map mk : G → G/Z(G) gives a surjection on CayleyBalls.
-  -- We use that mk '' (CayleyBall S_Q_lifts m) = CayleyBall S_Q m and that
-  -- ncard of the image is ≤ ncard of the source.
-  -- First show the image equality
-  have hmk_image : QuotientGroup.mk '' CayleyBall S_Q_lifts m = CayleyBall S_Q m := by
-    -- Show mk '' CayleyBall S_Q_lifts m = CayleyBall S_Q m
-    ext q
-    constructor
-    · rintro ⟨g, hg, rfl⟩
-      -- g ∈ CayleyBall S_Q_lifts m, need to show mk g ∈ CayleyBall S_Q m
-      obtain ⟨l, hl_len, hl_mem, hl_prod⟩ := hg
-      refine ⟨l.map QuotientGroup.mk, ?_, ?_, ?_⟩
-      · simp [hl_len]
-      · intro s hs
-        simp only [List.mem_map] at hs
-        obtain ⟨g', hg', rfl⟩ := hs
-        have := hl_mem g' hg'
-        rcases this with hS | hSinv
-        · left
-          -- hS : g' ∈ S_Q_lifts = lift '' S_Q
-          -- goal : ↑g' ∈ S_Q where ↑ : G → G ⧸ center G
-          obtain ⟨qg, hqg, hqg_eq⟩ := hS
-          -- hqg_eq : lift qg = g', so mk g' = mk (lift qg) = qg
-          rw [← hqg_eq]
-          -- Now need: ↑(lift qg) ∈ S_Q, i.e., QuotientGroup.mk (Quotient.out qg) ∈ S_Q
-          -- Since QuotientGroup.mk (Quotient.out qg) = qg
-          have h_eq : (QuotientGroup.mk (qg.out) : G ⧸ center G) = qg := QuotientGroup.out_eq' qg
-          rw [h_eq]
-          exact hqg
-        · right
-          -- hSinv : g'⁻¹ ∈ S_Q_lifts = lift '' S_Q
-          -- goal : (↑g')⁻¹ ∈ S_Q
-          obtain ⟨qg, hqg, hqg_eq⟩ := hSinv
-          -- hqg_eq : lift qg = g'⁻¹, so (↑g')⁻¹ = ↑(g'⁻¹) = ↑(lift qg) = qg
-          have h_goal : (QuotientGroup.mk g' : G ⧸ center G)⁻¹ = qg := by
-            have h1 : (QuotientGroup.mk g' : G ⧸ center G)⁻¹ =
-                QuotientGroup.mk (g'⁻¹) := (QuotientGroup.mk_inv (center G) g').symm
-            rw [h1]
-            -- Now need: ↑(g'⁻¹) = qg. We have g'⁻¹ = lift qg = qg.out
-            have h2 : g'⁻¹ = qg.out := hqg_eq.symm
-            rw [h2]
-            exact QuotientGroup.out_eq' qg
-          rw [h_goal]
-          exact hqg
-      · -- Use that (map QuotientGroup.mk l).prod = QuotientGroup.mk l.prod
-        -- First convert QuotientGroup.mk to QuotientGroup.mk' which is the same
-        have hmap_eq : l.map QuotientGroup.mk = l.map (QuotientGroup.mk' (center G)) := by
-          congr 1
-        rw [hmap_eq, List.prod_hom l (QuotientGroup.mk' (center G)), hl_prod]
-        exact QuotientGroup.mk'_apply (center G) g
-    · intro hq
-      -- q ∈ CayleyBall S_Q m, need g such that mk g = q and g ∈ CayleyBall S_Q_lifts m
-      obtain ⟨l, hl_len, hl_mem, hl_prod⟩ := hq
-      -- l is a list in G⧸Z with l.prod = q
-      -- We need a smart lift that handles both cases:
-      -- - When q' ∈ S_Q: use lift q' = Quotient.out q'
-      -- - When q'⁻¹ ∈ S_Q: use (lift (q'⁻¹))⁻¹ = (Quotient.out (q'⁻¹))⁻¹
-      -- The key is that mk of either choice equals q'.
-      open Classical in
-      let smartLift : G ⧸ center G → G := fun q' =>
-        if q' ∈ S_Q then lift q' else (lift (q'⁻¹))⁻¹
-      have hsmartLift_mk : ∀ q' : G ⧸ center G, QuotientGroup.mk (smartLift q') = q' := by
-        intro q'
-        simp only [smartLift]
-        split_ifs with h
-        · exact Quotient.out_eq' q'
-        · simp only [lift]
-          rw [QuotientGroup.mk_inv, QuotientGroup.out_eq', inv_inv]
-      use (l.map smartLift).prod
-      constructor
-      · refine ⟨l.map smartLift, ?_, ?_, rfl⟩
-        · simp [hl_len]
-        · intro s hs
-          simp only [List.mem_map] at hs
-          obtain ⟨q', hq', rfl⟩ := hs
-          have := hl_mem q' hq'
-          -- smartLift q' = if q' ∈ S_Q then lift q' else (lift (q'⁻¹))⁻¹
-          rcases this with hS | hSinv
-          · -- q' ∈ S_Q, so smartLift q' = lift q'
-            left
-            have heq : smartLift q' = lift q' := if_pos hS
-            rw [heq]
-            exact ⟨q', hS, rfl⟩
-          · -- q'⁻¹ ∈ S_Q, need smartLift q' ∈ S_Q_lifts ∨ (smartLift q')⁻¹ ∈ S_Q_lifts
-            by_cases hq'S : q' ∈ S_Q
-            · -- q' ∈ S_Q, so smartLift q' = lift q'
-              left
-              have heq : smartLift q' = lift q' := if_pos hq'S
-              rw [heq]
-              exact ⟨q', hq'S, rfl⟩
-            · -- q' ∉ S_Q, so smartLift q' = (lift (q'⁻¹))⁻¹
-              right
-              have heq : smartLift q' = (lift (q'⁻¹))⁻¹ := if_neg hq'S
-              rw [heq, inv_inv]
-              exact ⟨q'⁻¹, hSinv, rfl⟩
-      · -- mk (l.map smartLift).prod = q
-        rw [← hl_prod]
-        have hprod_hom := (List.prod_hom (l.map smartLift) (QuotientGroup.mk' (center G))).symm
-        simp only [QuotientGroup.mk'_apply] at hprod_hom
-        rw [hprod_hom, List.map_map]
-        -- QuotientGroup.mk' N = QuotientGroup.mk for the same quotient
-        have hfun_eq : (QuotientGroup.mk' (center G)) ∘ smartLift = id := by
-          ext q'
-          simp only [Function.comp_apply, QuotientGroup.mk'_apply, id_eq]
-          exact hsmartLift_mk q'
-        rw [hfun_eq, List.map_id]
-  rw [← hmk_image]
-  sorry
-
 /-! ### Central extension growth bound -/
 
 /-- If elements satisfying ¬P are central, then list products can be reordered as
@@ -706,17 +583,23 @@ theorem hasPolynomialGrowth_of_nilpotencyClass_le :
                 Nat.cast_mul _ _
               rw [← h]
               exact Nat.cast_le.mpr h_prod_bound
-          _ ≤ (GrowthFunction S_Q m) * (GrowthFunction S_Z m) := by
-              -- Use the Cayley ball lifting lemma for central quotients
-              have h_lift_bound := @cayleyBall_lift_bound_for_center_quotient G _ S_Q S_Z m
-              simp only [GrowthFunction]
-              sorry
           _ ≤ (C_Q * ↑m ^ d_Q) * (C_Z * ↑m ^ d_Z) := by
-              apply mul_le_mul
-              · exact hbound_Q m hm_pos
+              have hZ_eq : (CayleyBall S_Z_embed m).ncard = (CayleyBall S_Z m).ncard :=
+                cayleyBall_subtype_val_ncard (center G) S_Z m
+              rw [hZ_eq]
+              gcongr
+              · -- Bound: |Ball_{S_Q_lifts}(m)| ≤ C_Q * m^{d_Q}
+                -- Key insight: quotient map mk : Ball_lifts → Ball_Q is surjective
+                -- The fibers mk^{-1}(q) ∩ Ball_lifts lie in cosets of center G
+                -- For nilpotent groups, the specific structure of S_Q_lifts = Quotient.out '' S_Q
+                -- and the interaction with the center should give |Ball_lifts| ≤ O(|Ball_Q|)
+                -- This requires showing the fibers have bounded size (independent of m).
+                --
+                -- PROOF GAP: The standard argument uses that words from S_Q_lifts that differ
+                -- by central elements must have those central elements expressible as short
+                -- words from generators. For general nilpotent groups, this needs more work.
+                sorry
               · exact hbound_Z m hm_pos
-              · exact Nat.cast_nonneg _
-              · positivity
           _ = C_Q * C_Z * (↑m ^ d_Q * ↑m ^ d_Z) := by ring
           _ = C_Q * C_Z * ↑m ^ (d_Q + d_Z) := by rw [← pow_add]
           _ ≤ C_Z * C_Q * 2 ^ (d_Z + d_Q + 1) * ↑m ^ (d_Z + d_Q) := by
@@ -749,18 +632,36 @@ private theorem schreier_rewrite_bound {G : Type*} [Group G] {H : Subgroup G} [H
     (S_G : Set G) (hS_G : S_G = Subtype.val '' S_H ∪ ↑reps)
     (k : ℕ) (h : H) (hh_ball : (h : G) ∈ CayleyBall S_G k) :
     h ∈ CayleyBall S_H ((H.index + 1) * k) := by
-  -- Extract the word representation from the Cayley ball membership
   obtain ⟨l, hl_len, hl_mem, hl_prod⟩ := hh_ball
-  -- This is the quantitative Schreier rewriting bound
-  -- Proof strategy:
-  -- 1. Process word l letter by letter, tracking which coset H*r we're in
-  -- 2. At each step i, if we multiply by s ∈ S_G:
-  --    - If s ∈ val(S_H), we get a Schreier generator contribution
-  --    - If s ∈ reps, we cross to a different coset
-  -- 3. Each crossing and return adds O(index) generators from S_H
-  -- 4. Total: k steps × (index+1) generators
-  -- This requires implementing the Schreier rewriting algorithm
-  -- See Mathlib's Subgroup.closure_mul_image_eq for the qualitative version
+  -- Schreier Rewriting Algorithm (quantitative version):
+  --
+  -- Goal: Rewrite the word l (from S_G) as a word in S_H with bounded length
+  --
+  -- Algorithm:
+  --   1. Initialize: current_coset := H (the identity coset), accumulated_word := []
+  --   2. For each generator s in l:
+  --      a. Determine which coset we're in after multiplying by s
+  --      b. Compute the "Schreier generator": rep(current)^{-1} * s * rep(next)^{-1}
+  --      c. This Schreier generator lies in H and can be expressed using
+  --         ≤ (index + 1) generators from S_H
+  --      d. Append this to accumulated_word
+  --      e. Update current_coset
+  --   3. The accumulated_word has length ≤ k * (index + 1)
+  --
+  -- Key lemmas needed:
+  --   - Schreier generators are in H (follows from rep being coset representatives)
+  --   - Each Schreier generator uses ≤ (index + 1) letters from S_G
+  --   - The composition of rewritten generators equals the original element h
+  --
+  -- This is a standard result in combinatorial group theory (Schreier's subgroup theorem).
+  -- A full formalization requires defining the Schreier transversal and proving properties
+  -- of the rewriting map.
+  --
+  -- PROOF GAP: This requires a substantial development of Schreier theory, including:
+  --   - Formal definition of transversals and Schreier systems
+  --   - Construction of Schreier generators
+  --   - Proof that the rewriting preserves the group element
+  --   - Quantitative bound on word length after rewriting
   sorry
 
 /-- **Schreier bound**: For a finite-index subgroup H ≤ G with index m, if an element h ∈ H

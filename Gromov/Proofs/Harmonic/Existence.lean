@@ -57,18 +57,35 @@ theorem cesaro_asymptotically_harmonic (hS_nonempty : S.Nonempty) (f : G → ℝ
   sorry
 
 omit [DecidableEq G] in
-/-- The Cesaro average preserves the Lipschitz property (with same constant). -/
-theorem cesaro_preserves_lipschitz {L : ℝ} (hL : 0 ≤ L) (n : ℕ) (f : G → ℝ)
+/-- The Cesaro average preserves the Lipschitz property (with same constant).
+    Requires S to be symmetric. -/
+theorem cesaro_preserves_lipschitz (hS : Gromov.IsSymmetric S) {L : ℝ} (hL : 0 ≤ L) (n : ℕ) (f : G → ℝ)
     (hf : IsWordLipschitz S L f) :
     IsWordLipschitz S L (CesaroAverage S n f) := by
-  -- Proof outline:
-  -- 1. Show MarkovPower m preserves Lipschitz: the averaging operator is a contraction
-  --    |Af(x) - Af(y)| = |(1/|S|) ∑_s (f(xs) - f(ys))| ≤ (1/|S|) ∑_s |f(xs) - f(ys)|
-  --                     ≤ (1/|S|) ∑_s L·d(xs, ys) ≤ L·d(x,y)
-  -- 2. CesaroAverage is convex combination: (1/n) ∑_m ConvolutionPower m f
-  -- 3. Convex combinations preserve Lipschitz bounds
-  -- Missing infrastructure: formalization of operator properties, convex combination lemmas
-  sorry
+  -- First show that MarkovPower m preserves Lipschitz for any m
+  have markov_preserves : ∀ m : ℕ, IsWordLipschitz S L (MarkovPower S m f) := by
+    intro m
+    induction m with
+    | zero =>
+      -- MarkovPower 0 = id, so (MarkovPower 0 f) = f
+      intro x y
+      -- Goal: |(MarkovPower S 0 f) x - (MarkovPower S 0 f) y| ≤ L * wordDist x y
+      -- But MarkovPower 0 is defined inductively, need to show it equals f
+      sorry
+    | succ m' ih =>
+      -- MarkovPower (m'+1) = MarkovPower m' ∘ AveragingOperator
+      -- Need: AveragingOperator preserves Lipschitz
+      sorry
+  -- Now show CesaroAverage preserves Lipschitz
+  intro x y
+  unfold CesaroAverage
+  by_cases hn : n = 0
+  · simp [hn]
+    exact hf x y
+  · simp [hn]
+    -- Need to show: |(1/n) * Σ_{m ∈ range n} ConvolutionPower S (m+1) f x - (1/n) * Σ_{m ∈ range n} ConvolutionPower S (m+1) f y| ≤ L * wordDist S x y
+    -- = |(1/n) * Σ_{m ∈ range n} (ConvolutionPower S (m+1) f x - ConvolutionPower S (m+1) f y)| ≤ L * wordDist S x y
+    sorry
 
 end CesaroAverages
 
@@ -296,20 +313,50 @@ theorem harmonic_constant_on_coset (hS : Gromov.IsSymmetric S) (hS_nonempty : S.
     (hS_gen : Subgroup.closure S = ⊤) (f : G → ℝ) (hf : IsHarmonicSymmetric S f)
     (H : Subgroup G) [H.FiniteIndex] (c : ℝ) (hc : ∀ h : H, f h.val = c) :
     ∀ g : G, f g = c := by
-  -- Apply maximum principle directly
-  -- Since f is constant on H, f x = c for all x ∈ H, in particular f(1) = c
+  -- Since f is constant on H, in particular f(1) = c
   have f_one : f 1 = c := hc ⟨1, H.one_mem⟩
-  -- Since S generates G and f is harmonic, use maximum principle
-  -- f must be constant if it equals its supremum at 1
-  -- We show f x = f 1 for all x, which gives f x = c
-  have h_const : ∀ x : G, f x = f 1 := by
-    -- To use maximum principle, we need to show f attains its max at 1
-    -- But we don't have that f 1 is the maximum...
-    -- Instead, we use that f is constant on the identity coset of H
-    -- Let's use a different approach: show f cannot vary from c
-    sorry
-  intro g
-  rw [h_const g, f_one]
+
+  -- Strategy: Consider f - c, which is harmonic and zero on H
+  -- We'll show f - c is identically zero
+
+  -- Define g := f - c (the shifted function)
+  let g : G → ℝ := fun x => f x - c
+
+  -- g is harmonic (difference of harmonic and constant)
+  have hg : IsHarmonicSymmetric S g := by
+    intro x
+    have := hf x
+    show ∑ s : S, (f (x * s.val) - c) = ↑(Fintype.card S) * (f x - c)
+    calc ∑ s : S, (f (x * s.val) - c)
+        = ∑ s : S, f (x * s.val) - ∑ s : S, c := by
+          rw [← Finset.sum_sub_distrib]
+      _ = ↑(Fintype.card S) * f x - ↑(Fintype.card S) * c := by
+          rw [this]
+          simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+      _ = ↑(Fintype.card S) * (f x - c) := by ring
+
+  -- g is zero on H
+  have hg_zero_on_H : ∀ h : H, g h.val = 0 := by
+    intro h
+    show f h.val - c = 0
+    rw [hc h, sub_self]
+
+  -- Since g(1) = f(1) - c = c - c = 0
+  have hg_one : g 1 = 0 := by show f 1 - c = 0; rw [f_one, sub_self]
+
+  -- Key claim: If g is harmonic, zero on a subgroup H, and H has finite index,
+  -- then g attains its extrema (on H), so by maximum principle g is constant = 0.
+
+  -- We'll use a different approach: show g takes only finitely many values
+  -- Since there are finitely many cosets, and g is harmonic, we can show g is constant
+
+  -- Actually, the cleanest approach: since g is zero on H and harmonic,
+  -- and H contains the identity, we can propagate this using the maximum principle.
+  -- But we need to show g is bounded first.
+
+  -- Alternative: Show that g being harmonic and zero on a finite-index subgroup
+  -- implies g is zero everywhere by a direct argument using cosets.
+  sorry
 
 end MaximumPrinciple
 

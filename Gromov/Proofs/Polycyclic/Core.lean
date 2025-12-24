@@ -640,6 +640,17 @@ theorem isPolycyclic_of_fg_commGroup (H : Type*) [CommGroup H] [FG H] :
       -- Now use extension theorem: C polycyclic, H/C polycyclic => H polycyclic
       exact isPolycyclic_of_extension C hC_cyclic hQ_poly
 
+/-- The commutator of two f.g. subgroups is f.g.
+
+BLOCKING LEMMA: This is a fundamental result in combinatorial group theory.
+Proof strategy: If S generates H and T generates K, then ⁅H, K⁆ is generated
+by {⁅s, t⁆ | s ∈ S±¹, t ∈ T±¹}. The proof requires Hall-Witt commutator identities.
+This should be added to Mathlib.GroupTheory.Commutator.Finite.
+-/
+lemma commutator_fg {G : Type*} [Group G] (H K : Subgroup G) [FG H] [FG K] :
+    FG (⁅H, K⁆ : Subgroup G) := by
+  sorry
+
 /-- The lower central series of a f.g. group has f.g. terms -/
 theorem lowerCentralSeries_fg (H : Type*) [Group H] [FG H] (n : ℕ) :
     FG (lowerCentralSeries H n) := by
@@ -655,10 +666,17 @@ theorem lowerCentralSeries_fg (H : Type*) [Group H] [FG H] (n : ℕ) :
       fun x => ⟨Subgroup.topEquiv x, by simp [Subgroup.topEquiv]⟩
     exact Group.fg_of_surjective this
   | succ n ih =>
-    -- lowerCentralSeries H (n+1) = [lowerCentralSeries H n, ⊤]
-    -- The commutator of two f.g. groups is f.g.
-    -- This is a standard result but requires some work
-    sorry
+    -- lowerCentralSeries H (n+1) = ⁅lowerCentralSeries H n, ⊤⁆
+    rw [lowerCentralSeries_succ]
+    -- By IH, lowerCentralSeries H n is f.g.
+    haveI : FG (lowerCentralSeries H n) := ih
+    -- ⊤ is f.g. (isomorphic to H)
+    haveI : FG (⊤ : Subgroup H) := by
+      have : Function.Surjective (Subgroup.topEquiv (G := H)).symm.toMonoidHom :=
+        fun x => ⟨Subgroup.topEquiv x, by simp [Subgroup.topEquiv]⟩
+      exact Group.fg_of_surjective this
+    -- Apply commutator_fg
+    exact commutator_fg (lowerCentralSeries H n) ⊤
 
 /-! ### Polycyclic Group Theorems -/
 
@@ -738,18 +756,18 @@ theorem isPolycyclic_of_isNilpotent_fg (H : Type*) [Group H] [FG H] [IsNilpotent
     -- H/L_n is polycyclic by IH
     have hQ_poly : IsPolycyclic (H ⧸ L) := ih (H ⧸ L) (by
       -- Need to show lowerCentralSeries (H ⧸ L) n = ⊥
-      -- Key insight: The lower central series of H/L can be related to that of H:
-      -- If L = lowerCentralSeries H n and lowerCentralSeries H (n+1) = ⊥,
-      -- then lowerCentralSeries (H/L) n should also be ⊥.
+      -- We have L = lowerCentralSeries H n and lowerCentralSeries H (n+1) = ⊥
       --
-      -- Proof sketch: By induction on n. For n=0, L = ⊤ so H/L is trivial.
-      -- For n>0, we can show that elements of lowerCentralSeries (H/L) n lift to
-      -- elements in lowerCentralSeries H (n+1) ⊔ L. Since lowerCentralSeries H (n+1) = ⊥,
-      -- any such element must be in L, hence trivial in the quotient.
+      -- Key fact: lowerCentralSeries is antitone, so lowerCentralSeries H (n+1) = ⊥
+      -- implies lowerCentralSeries H k = ⊥ for all k > n.
       --
-      -- This requires a general lemma about lower central series and quotients:
-      -- comap (mk' L) (lowerCentralSeries (H/L) k) contains lowerCentralSeries H (k+m)
-      -- where L = lowerCentralSeries H m, but this lemma doesn't exist in Mathlib yet.
+      -- We'll show that comap (QuotientGroup.mk' L) (lowerCentralSeries (H ⧸ L) n) ≤
+      -- lowerCentralSeries H (n+n) = ⊥, which gives the result.
+      --
+      -- This requires a lemma relating LCS of quotients to LCS of the original group.
+      -- The needed lemma: for normal N ≤ lowerCentralSeries G m,
+      --   comap (mk' N) (lowerCentralSeries (G/N) k) ≤ lowerCentralSeries G (m+k)
+      -- This lemma doesn't exist in Mathlib and is non-trivial to prove.
       sorry)
     -- H is extension of L by H/L, both polycyclic
     exact isPolycyclic_of_extension L hL_poly hQ_poly
@@ -781,12 +799,17 @@ theorem polycyclic_has_finiteIndex_nilpotent_normal_subgroup (H : Type*) [Group 
 -/
 
 -- Polycyclic groups are virtually nilpotent (follows from the Fitting subgroup theorem)
--- TODO: Remove sorry once fittingSubgroup infrastructure is available
+-- BLOCKING: Requires Fitting subgroup infrastructure (not in Mathlib)
 theorem isVirtuallyNilpotent_of_isPolycyclic (H : Type*) [Group H] (hP : IsPolycyclic H) :
     IsVirtuallyNilpotent H := by
-  -- The proof uses the Fitting subgroup theorem: every polycyclic group has
-  -- a finite-index normal nilpotent subgroup (the Fitting subgroup).
-  -- This requires infrastructure not yet in Mathlib.
+  -- BLOCKED: The proof requires the Fitting subgroup theorem, which states that
+  -- every polycyclic group has a finite-index normal nilpotent subgroup.
+  -- The Fitting subgroup F(G) is the join of all normal nilpotent subgroups,
+  -- and in polycyclic groups it has finite index.
+  --
+  -- This requires defining `fittingSubgroup`, proving it's normal and nilpotent,
+  -- and showing it has finite index in polycyclic groups.
+  -- See the commented-out theorem above for the intended structure.
   sorry
 
 /-- Finite solvable groups are polycyclic.
@@ -810,6 +833,17 @@ References:
 -/
 theorem isPolycyclic_of_finite (K : Type*) [Group K] [Finite K] [IsSolvable K] :
     IsPolycyclic K := by
+  -- Proof strategy: Induct on the derived series K ⊇ K' ⊇ K'' ⊇ ... ⊇ {1}.
+  -- At each step, K/K' is a finite abelian group, hence polycyclic by the structure theorem.
+  -- Use isPolycyclic_of_extension to build up.
+  --
+  -- The key steps are:
+  -- 1. Show finite abelian groups are polycyclic (use FiniteAbelian.Basic structure theorem)
+  -- 2. Induct on derived length using solvability
+  -- 3. Apply extension theorem at each step
+  --
+  -- This requires careful handling of typeclass instances for the quotient K/K'
+  -- and connecting the structure theorem to the polycyclic definition.
   sorry
 
 /-- Subgroups of polycyclic groups are polycyclic.
@@ -991,6 +1025,25 @@ theorem isPolycyclic_of_le {G : Type*} [Group G] {H K : Subgroup G}
 
 
 
+/-- Quotients of polycyclic groups by normal subgroups are polycyclic.
+
+If G has a polycyclic series G = G_0 > G_1 > ... > G_n = 1 and N is normal in G,
+then G/N has the polycyclic series (G_i N)/N which form a polycyclic series for G/N.
+-/
+lemma isPolycyclic_quotient {G : Type*} [Group G] (hG : IsPolycyclic G)
+    (N : Subgroup G) [N.Normal] : IsPolycyclic (G ⧸ N) := by
+  -- Get the polycyclic series for G
+  obtain ⟨n, G_series, hTop, hBot, hLe, hNorm, hCyc⟩ := hG
+  -- The series for G/N is (G_i · N)/N, which equals (map mk' G_i) where mk' : G → G/N
+  -- But we need to be more careful: the series should be (G_i ⊔ N)/N
+  -- Actually, by the correspondence theorem, subgroups of G/N containing N/N
+  -- correspond to subgroups of G containing N.
+  -- So we use: (G_series i ⊔ N) / N as our series for G/N
+  --
+  -- This requires showing the quotient map of the join equals the expected quotient.
+  -- The key lemma is the correspondence theorem for quotient groups.
+  sorry
+
 theorem isPolycyclic_of_finiteIndex_polycyclic (H : Subgroup G) [H.FiniteIndex]
     (hH : IsPolycyclic H) : IsPolycyclic G := by
   -- H.normalCore is normal in G with finite index
@@ -1002,9 +1055,17 @@ theorem isPolycyclic_of_finiteIndex_polycyclic (H : Subgroup G) [H.FiniteIndex]
   have hN_poly : IsPolycyclic N := isPolycyclic_of_le hN_le_H hH
   -- G/N is finite
   haveI : Finite (G ⧸ N) := inferInstance  -- finite_quotient_of_finiteIndex is an instance
-  -- G/N is solvable: would require proving polycyclic => solvable
-  -- G/N is finite and solvable, hence polycyclic
-  sorry
+  -- But wait - we can't use isPolycyclic_quotient on H because we need G to be polycyclic!
+  -- Different approach: H/N has finite index in G/N (since [G:H] = [G/N : H/N])
+  -- and H/N is polycyclic (as quotient of polycyclic H).
+  -- So if we had a lemma that finite extensions of polycyclic groups are polycyclic...
+  -- but that's what we're trying to prove!
+  --
+  -- CIRCULAR DEPENDENCY: Need either isPolycyclic_quotient for general groups OR
+  -- some other approach.  Actually, the cleanest approach is:
+  -- Since H is polycyclic and solvable, and [G:H] finite, we can show G is solvable.
+  -- Then since G/N is finite and solvable, it's polycyclic by isPolycyclic_of_finite.
+  sorry  -- Blocked on: polycyclic => solvable, and isPolycyclic_of_finite
 
 
 /-- Subgroups of polycyclic groups are finitely generated (Mal'cev 1951).
@@ -1032,9 +1093,28 @@ theorem Subgroup.fg_of_polycyclic (hG : IsPolycyclic G) (H : Subgroup G) : FG H 
     haveI : Subsingleton H := inferInstance
     exact ⟨∅, by simp [ Subgroup.eq_bot_of_subsingleton]⟩
   | succ n ih =>
-    -- TODO: This proof is incomplete and has circular dependency issues
-    -- The full proof should be in Malcev.lean
-    sorry
+    -- Inductive step: G has a polycyclic series of length n+1
+    -- Strategy: Show H/(H ∩ G_1) is f.g., and H ∩ G_1 is f.g. by IH
+    --
+    -- Let G_1 = G_series 1 (the second term in the series)
+    -- Then G/G_1 is cyclic (since G_0/G_1 is cyclic and G_0 = ⊤)
+    --
+    -- H/(H ∩ G_1) embeds into G/G_1 via the natural map
+    -- Since G/G_1 is cyclic, H/(H ∩ G_1) is cyclic (subgroup of cyclic is cyclic)
+    -- So H/(H ∩ G_1) is f.g.
+    --
+    -- G_1 has a polycyclic series of length n (the restriction of G_series from index 1 onward)
+    -- By IH, H ∩ G_1 is f.g.
+    --
+    -- By the extension lemma (if N ⊴ H, N f.g., and H/N f.g., then H f.g.),
+    -- H is f.g.
+    --
+    -- The difficulty is that H ∩ G_1 might not be normal in H, so we can't directly
+    -- apply an extension lemma. Instead, we need to use that if a group has f.g. quotient
+    -- by a f.g. subgroup, it's f.g.
+    --
+    -- This requires Schreier's lemma or a careful direct construction.
+    sorry  -- Need: extension-by-fg lemma or Schreier-type argument
 
 /-! ### Main Theorem -/
 

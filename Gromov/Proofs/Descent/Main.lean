@@ -122,9 +122,6 @@ Each of these theorems requires substantial infrastructure:
 
 - **Theorem 3** (isVirtuallyNilpotent_of_extension_by_Z): ~300-500 lines
   Requires: Subgroup finiteness, intersection indices, conjugation actions
-
-Theorems 1 and 3 are currently axiomatized with comprehensive documentation of the
-mathematical ideas and missing infrastructure. Theorem 2 is implemented.
 -/
 
 /-- If G is an infinite group with polynomial growth, then G has an infinite cyclic quotient.
